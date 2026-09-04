@@ -2,17 +2,18 @@
 
 ## Boundary
 
-Mia Studio 不 fork 并持续改造 doocs/md 的通用 Web 外壳。它使用独立应用壳，通过稳定适配层复用 doocs/md 的渲染、编辑和 AI 基础能力。
+Mia Studio 不重新实现 doocs/md 的编辑和预览。它以 doocs/md 的 Web 编辑器和核心作为主交互，用适配层把文档状态、图片存储和服务端凭据接入。详细保留清单见 [DOOCS-CAPABILITY-MAP.md](DOOCS-CAPABILITY-MAP.md)。
 
 ## Components
 
 ```text
-Mia Studio Web/PWA
-  -> Mia API /v1
+doocs/md Editor + Preview + AI UI
+  -> Mia Studio host shell
+       -> Mia API /v1
        -> Markdown Vault (source of truth)
        -> SQLite (index, sessions and jobs)
        -> AI gateway (server-side credentials)
-       -> doocs/md renderer adapter
+       -> doocs/md renderer and editor adapter
        -> WeChat publisher
 
 Mia CLI / Obsidian / MCP

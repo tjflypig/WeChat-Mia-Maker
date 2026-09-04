@@ -25,6 +25,8 @@ packages/
 
 `mia-studio`、doocs/md adapter、AI、微信发布和 MCP 将沿着同一领域模型逐步接入，不会复制一套平行数据。
 
+doocs/md 的导出、一键换模板、社区模板、文字统计、实时预览、图片处理、AI、历史版本等能力默认全部保留，详见 [doocs/md 能力引入清单](docs/DOOCS-CAPABILITY-MAP.md)。
+
 ## Quick start
 
 需要 Node.js 22 和 pnpm 11：
