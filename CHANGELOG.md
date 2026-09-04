@@ -4,6 +4,14 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-04
+
+### Added
+
+- `@mia/md-adapter` as the single renderer boundary for doocs/md injection.
+- Explicit degraded preview mode when the doocs workspace is not available.
+- Adapter contract tests covering injected and fallback renderer behavior.
+
 ## [0.3.0] - 2026-09-04
 
 ### Added

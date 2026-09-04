@@ -8,6 +8,7 @@ const packagePaths = [
   `apps/mia-studio/package.json`,
   `packages/mia-cli/package.json`,
   `packages/workspace/package.json`,
+  `packages/md-adapter/package.json`,
 ]
 const [versionFile, ...packageFiles] = await Promise.all([
   readFile(new URL('VERSION', rootUrl), 'utf8'),

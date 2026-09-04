@@ -19,6 +19,9 @@ importers:
       '@lucide/vue':
         specifier: ^1.38.0
         version: 1.40.0(vue@3.5.42)
+      '@mia/md-adapter':
+        specifier: workspace:*
+        version: link:../../packages/md-adapter
       vue:
         specifier: ^3.5.42
         version: 3.5.42
@@ -29,6 +32,8 @@ importers:
       vite:
         specifier: ^8.2.2
         version: 8.2.2
+
+  packages/md-adapter: {}
 
   packages/mia-cli:
     dependencies:

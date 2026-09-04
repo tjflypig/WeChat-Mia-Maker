@@ -24,6 +24,7 @@ import {
   X,
 } from '@lucide/vue'
 import { api, ApiError } from './api.js'
+import { createDoocsAdapter } from '@mia/md-adapter'
 
 const stages = [
   { id: `topics`, label: `选题`, icon: Lightbulb },
@@ -55,6 +56,7 @@ const inspectorOpen = ref(false)
 const quickFind = ref(``)
 let saveTimer
 let acceptingRemoteContent = false
+const mdAdapter = createDoocsAdapter(globalThis.__MIA_DOOCS_ENGINE__)
 
 const currentTitle = computed(() => selectedArticle.value?.frontmatter?.title || `未选择文章`)
 const filteredArticles = computed(() => articles.value.filter(item => item.title.toLowerCase().includes(quickFind.value.toLowerCase())))
@@ -68,21 +70,7 @@ const saveLabel = computed(() => ({
   error: `保存失败`,
 }[saveState.value] || `等待保存`))
 
-const previewHtml = computed(() => {
-  const escaped = articleBody.value
-    .replace(/&/g, `&amp;`).replace(/</g, `&lt;`).replace(/>/g, `&gt;`)
-  return escaped
-    .split(`\n`)
-    .map((line) => {
-      if (line.startsWith(`### `)) return `<h3>${line.slice(4)}</h3>`
-      if (line.startsWith(`## `)) return `<h2>${line.slice(3)}</h2>`
-      if (line.startsWith(`# `)) return `<h1>${line.slice(2)}</h1>`
-      if (line.startsWith(`> `)) return `<blockquote>${line.slice(2)}</blockquote>`
-      if (line.startsWith(`- `)) return `<p class="preview-list">• ${line.slice(2)}</p>`
-      return line ? `<p>${line}</p>` : `<span class="preview-gap"></span>`
-    })
-    .join(``)
-})
+const previewHtml = computed(() => mdAdapter.render(`${frontmatterBlock.value}${articleBody.value}`).html)
 
 function splitEditableDocument(content) {
   const match = String(content).match(/^(---\n[\s\S]*?\n---\n?)([\s\S]*)$/)
@@ -402,7 +390,7 @@ onBeforeUnmount(() => {
         </section>
 
         <section v-show="activeStage === `preview`" class="preview-stage">
-          <div class="preview-toolbar"><div><strong>微信预览</strong><span>当前为基础预览，doocs/md 适配器将在本阶段接入</span></div><button class="button quiet" @click="activeStage = `write`"><PenLine :size="16" /> 继续编辑</button></div>
+          <div class="preview-toolbar"><div><strong>微信预览</strong><span>{{ mdAdapter.degraded ? `基础降级预览 · doocs/md 引擎待注入` : `doocs/md 渲染` }}</span></div><button class="button quiet" @click="activeStage = `write`"><PenLine :size="16" /> 继续编辑</button></div>
           <div class="phone-canvas"><article class="wechat-article" v-html="previewHtml"></article></div>
         </section>
 
@@ -412,7 +400,7 @@ onBeforeUnmount(() => {
             <div class="check-row pass"><Check :size="20" /><span><strong>标题</strong><small>{{ selectedArticle?.frontmatter?.title || `尚未填写` }}</small></span></div>
             <div class="check-row" :class="selectedArticle?.frontmatter?.summary ? `pass` : `waiting`"><component :is="selectedArticle?.frontmatter?.summary ? Check : CircleAlert" :size="20" /><span><strong>摘要</strong><small>{{ selectedArticle?.frontmatter?.summary || `需要补充摘要` }}</small></span></div>
             <div class="check-row" :class="selectedArticle?.frontmatter?.cover ? `pass` : `waiting`"><component :is="selectedArticle?.frontmatter?.cover ? Check : CircleAlert" :size="20" /><span><strong>封面</strong><small>{{ selectedArticle?.frontmatter?.cover || `需要选择封面` }}</small></span></div>
-            <div class="check-row waiting"><LoaderCircle :size="20" /><span><strong>doocs/md 渲染</strong><small>等待渲染适配器接入</small></span></div>
+            <div class="check-row" :class="mdAdapter.degraded ? `waiting` : `pass`"><component :is="mdAdapter.degraded ? LoaderCircle : Check" :size="20" /><span><strong>doocs/md 渲染</strong><small>{{ mdAdapter.degraded ? `等待服务端注入 doocs/md 引擎` : `渲染成功` }}</small></span></div>
             <div class="check-row waiting"><LoaderCircle :size="20" /><span><strong>微信接口</strong><small>尚未连接发布凭据</small></span></div>
           </div>
           <div class="publish-footer"><p>预检全部通过后才能推送，不会盲发。</p><button class="button primary" disabled><Send :size="18" /> 推送到微信草稿箱</button></div>
