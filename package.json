@@ -1,0 +1,14 @@
+{
+  "name": "wechat-mia-maker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted WeChat public-account creation studio powered by the doocs/md engine",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "scripts": {
+    "version:check": "node scripts/check-version.mjs"
+  }
+}
