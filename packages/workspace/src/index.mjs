@@ -287,12 +287,16 @@ export async function listArticles(root, { status } = {}) {
     .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
 }
 
-export async function createArticle(root, { title, topicId = null, now = new Date() }) {
+export async function createArticle(root, { title, topicId = null, id: requestedId = null, body = null, now = new Date() }) {
   if (!String(title || ``).trim())
     throw new WorkspaceError(`invalid_title`, `Article title is required`)
   await initVault(root)
   const slug = slugify(title)
-  const id = `article-${compactStamp(now)}-${randomUUID().slice(0, 8)}`
+  const id = requestedId ? String(requestedId) : `article-${compactStamp(now)}-${randomUUID().slice(0, 8)}`
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{7,127}$/.test(id))
+    throw new WorkspaceError(`invalid_id`, `Article id is invalid`)
+  if ((await listArticles(root)).some(article => article.id === id))
+    throw new WorkspaceError(`conflict`, `Article already exists: ${id}`)
   const timestamp = nowIso(now)
   let directory = path.join(root, AREAS.articles, `${dayStamp(now)}-${slug}`)
   let suffix = 2
@@ -303,7 +307,8 @@ export async function createArticle(root, { title, topicId = null, now = new Dat
   await mkdir(path.join(directory, `reports`), { recursive: true })
   await mkdir(path.join(directory, `publish`), { recursive: true })
 
-  const content = `---\nschema_version: ${VAULT_SCHEMA_VERSION}\nid: ${scalar(id)}\ntopic_id: ${scalar(topicId)}\ntitle: ${scalar(title.trim())}\nstatus: "drafting"\nauthor: ""\nsummary: ""\ncover: ""\ntheme: "mia-life-lab"\ncreated_at: ${scalar(timestamp)}\nupdated_at: ${scalar(timestamp)}\nrevision: 1\n---\n# ${title.trim()}\n\n`
+  const articleBody = body == null ? `# ${title.trim()}\n\n` : String(body)
+  const content = `---\nschema_version: ${VAULT_SCHEMA_VERSION}\nid: ${scalar(id)}\ntopic_id: ${scalar(topicId)}\ntitle: ${scalar(title.trim())}\nstatus: "drafting"\nauthor: ""\nsummary: ""\ncover: ""\ntheme: "mia-life-lab"\ncreated_at: ${scalar(timestamp)}\nupdated_at: ${scalar(timestamp)}\nrevision: 1\n---\n${articleBody}`
   const file = path.join(directory, `index.md`)
   await atomicWrite(file, content)
   return readEntity(file)

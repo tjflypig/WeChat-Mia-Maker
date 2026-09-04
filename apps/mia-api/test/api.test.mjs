@@ -33,10 +33,16 @@ test(`serves authenticated article APIs and rejects stale writes`, async () => {
     const createdResponse = await fetch(`${base}/v1/articles`, {
       method: `POST`,
       headers: { 'content-type': `application/json`, cookie },
-      body: JSON.stringify({ title: `API \u521b\u5efa\u7684\u6587\u7ae0` }),
+      body: JSON.stringify({
+        id: `doocs-cloud-document-01`,
+        title: `API \u521b\u5efa\u7684\u6587\u7ae0`,
+        body: `# Doocs \u6b63\u6587\n`,
+      }),
     })
     assert.equal(createdResponse.status, 201)
     const created = await createdResponse.json()
+    assert.equal(created.id, `doocs-cloud-document-01`)
+    assert.match(created.content, /# Doocs \u6b63\u6587/)
     const originalEtag = created.etag
 
     const savedResponse = await fetch(`${base}/v1/articles/${created.id}`, {

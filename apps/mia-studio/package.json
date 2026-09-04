@@ -1,20 +1,29 @@
 {
   "name": "@mia/studio",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "vite --config vite.doocs.config.js",
+    "build": "vite build --config vite.doocs.config.js",
+    "preview": "vite preview --config vite.doocs.config.js"
   },
   "dependencies": {
     "@lucide/vue": "^1.38.0",
+    "@mia/md-adapter": "workspace:*",
+    "@vueuse/core": "^14.4.0",
+    "pinia": "^4.0.3",
     "vue": "^3.5.42",
-    "@mia/md-adapter": "workspace:*"
+    "vue-i18n": "^11.4.10"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-vue": "^6.0.8",
+    "less": "^4.9.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.3",
+    "unplugin-auto-import": "^21.1.0",
+    "unplugin-vue-components": "^32.1.0",
     "vite": "^8.2.2"
   }
 }

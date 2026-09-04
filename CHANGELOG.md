@@ -4,6 +4,20 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-04
+
+### Added
+
+- doocs/md native Web application as the Mia Studio editing workspace.
+- Accessible password gate before the doocs application bootstrap.
+- Tencent Cloud Vault document repository injected at the doocs persistence boundary.
+- Cloud article creation with client-stable IDs and body-only editing while preserving Vault frontmatter.
+- Conflict-safe automatic saves backed by article ETags.
+
+### Changed
+
+- Replaced the temporary textarea editor entry with doocs CodeMirror, live preview, templates, exports, AI, image tools and history UI.
+
 ## [0.3.1] - 2026-09-04
 
 ### Added

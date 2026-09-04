@@ -165,7 +165,13 @@ export async function createMiaServer(options) {
         return json(res, 200, { articles: await listArticles(vaultRoot, { status: url.searchParams.get(`status`) || undefined }) })
 
       if (pathname === `/v1/articles` && req.method === `POST`) {
-        const article = await createArticle(vaultRoot, await readJson(req))
+        const body = await readJson(req)
+        const article = await createArticle(vaultRoot, {
+          title: body.title,
+          topicId: body.topicId,
+          id: body.id,
+          body: body.body,
+        })
         return json(res, 201, publicEntity(article), { etag: `"${article.etag}"` })
       }
 

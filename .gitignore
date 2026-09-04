@@ -27,4 +27,5 @@ data/
 # Logs and caches
 *.log
 .cache/
+.playwright-cli/
 tmp/
