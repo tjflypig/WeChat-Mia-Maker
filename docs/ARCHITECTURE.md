@@ -7,7 +7,7 @@ Mia Studio 不重新实现 doocs/md 的编辑和预览。它以 doocs/md 的 Web
 ## Components
 
 ```text
-doocs/md Editor + Preview + AI UI
+doocs/md Editor + Preview + AI UI (`vendor/doocs-md`)
   -> Mia Studio host shell
        -> Mia API /v1
        -> Markdown Vault (source of truth)

@@ -27,6 +27,8 @@ packages/
 
 doocs/md 的导出、一键换模板、社区模板、文字统计、实时预览、图片处理、AI、历史版本等能力默认全部保留，详见 [doocs/md 能力引入清单](docs/DOOCS-CAPABILITY-MAP.md)。
 
+上游源码以 Git 子模块锁定在 [`vendor/doocs-md`](vendor/doocs-md)，当前基线为 `ff932394d975d9a2f96456df7bbec4d024cd4ba1`。更新上游必须单独评审，不能在 Mia 中复制组件。
+
 ## Quick start
 
 需要 Node.js 22 和 pnpm 11：

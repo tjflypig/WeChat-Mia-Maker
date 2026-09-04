@@ -1,6 +1,6 @@
 # doocs/md 能力引入清单
 
-Mia Studio 不重新实现 Markdown 编辑器。`tools/md-editor` 是主交互引擎，Mia 只提供外围数据与发布服务。
+Mia Studio 不重新实现 Markdown 编辑器。`vendor/doocs-md` 是锁定版本的主交互引擎，Mia 只提供外围数据与发布服务。
 
 ## 必须保留的原生能力
 
