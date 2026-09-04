@@ -1,0 +1,12 @@
+{
+  "name": "@mia/cli",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mia": "src/cli.mjs"
+  },
+  "dependencies": {
+    "@mia/workspace": "workspace:*"
+  }
+}

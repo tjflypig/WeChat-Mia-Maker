@@ -1,0 +1,23 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  apps/mia-api:
+    dependencies:
+      '@mia/workspace':
+        specifier: workspace:*
+        version: link:../../packages/workspace
+
+  packages/mia-cli:
+    dependencies:
+      '@mia/workspace':
+        specifier: workspace:*
+        version: link:../workspace
+
+  packages/workspace: {}

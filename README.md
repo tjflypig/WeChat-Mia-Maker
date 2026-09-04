@@ -12,25 +12,44 @@ Mia Studio 是一个自托管的微信公众号创作工作台，覆盖选题、
 - AI 产出默认是 proposal，不在未确认时覆盖正文。
 - 发布基于通过预检的不可变文章快照。
 
-## Planned workspace
+## Workspace
 
 ```text
 apps/
-  mia-studio/          Vue 3 / Vite / PWA
-  mia-api/             Auth, Vault, AI and publish API
+  mia-api/             Auth and Vault HTTP API
 packages/
-  core/                doocs/md rendering engine adapter
-  ai-core/             Provider, streaming and diff contracts
   workspace/           Markdown Vault and conflict control
-  wechat-publisher/     Preflight, image and draft pipeline
   mia-cli/             `mia` command line
-  mcp-server/          Agent integration
 ```
+
+`mia-studio`、doocs/md adapter、AI、微信发布和 MCP 将沿着同一领域模型逐步接入，不会复制一套平行数据。
+
+## Quick start
+
+需要 Node.js 22 和 pnpm 11：
+
+```bash
+pnpm install
+pnpm mia vault init ./vault
+pnpm mia topic add "给孩子做一个本地 AI 玩具" --vault ./vault
+pnpm mia topic list --vault ./vault
+```
+
+启动 API 前复制并填写 `.env.example` 中的环境变量，再执行：
+
+```bash
+set -a
+source .env
+set +a
+pnpm api
+```
+
+API 默认使用 `/v1`，支持登录会话、Bearer token、选题创建/立项、文章创建/读写。文章写入必须携带 `If-Match` ETag，防止电脑、手机和 Agent 相互覆盖。
 
 ## Version
 
-The current design-foundation version is `0.1.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
+The current foundation version is `0.2.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## Status
 
-The repository is in architecture and foundation stage. Production credentials, real Vault content and generated artifacts must never be committed.
+Phase 0 已实现 Markdown Vault、原子写、ETag 冲突保护、选题到文章立项、登录 API 和 CLI。生产密钥、真实 Vault 内容和生成产物不得提交。
