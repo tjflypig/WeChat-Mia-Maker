@@ -5,6 +5,7 @@ const rootUrl = new URL('../', import.meta.url)
 const packagePaths = [
   `package.json`,
   `apps/mia-api/package.json`,
+  `apps/mia-studio/package.json`,
   `packages/mia-cli/package.json`,
   `packages/workspace/package.json`,
 ]

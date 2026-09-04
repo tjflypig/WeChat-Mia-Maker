@@ -16,6 +16,7 @@ Mia Studio 是一个自托管的微信公众号创作工作台，覆盖选题、
 
 ```text
 apps/
+  mia-studio/          Vue 3 / Vite responsive Web/PWA
   mia-api/             Auth and Vault HTTP API
 packages/
   workspace/           Markdown Vault and conflict control
@@ -44,12 +45,18 @@ set +a
 pnpm api
 ```
 
+另一个终端启动 Web 工作台：
+
+```bash
+pnpm studio
+```
+
 API 默认使用 `/v1`，支持登录会话、Bearer token、选题创建/立项、文章创建/读写。文章写入必须携带 `If-Match` ETag，防止电脑、手机和 Agent 相互覆盖。
 
 ## Version
 
-The current foundation version is `0.2.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
+The current application-shell version is `0.3.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## Status
 
-Phase 0 已实现 Markdown Vault、原子写、ETag 冲突保护、选题到文章立项、登录 API 和 CLI。生产密钥、真实 Vault 内容和生成产物不得提交。
+Phase 1 已实现 Markdown Vault、登录 API、CLI 和桌面/手机统一工作台。当前预览是明确标识的基础预览；doocs/md 最终渲染、AI 网关和微信草稿接口尚未接入。生产密钥、真实 Vault 内容和生成产物不得提交。

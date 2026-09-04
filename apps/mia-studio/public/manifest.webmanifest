@@ -1,0 +1,12 @@
+{
+  "name": "Mia Studio",
+  "short_name": "Mia",
+  "description": "从选题到微信草稿的公众号创作工作台",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8faf9",
+  "theme_color": "#176b52",
+  "icons": [
+    { "src": "/mia-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

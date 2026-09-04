@@ -38,7 +38,7 @@ Mia Studio 同时管理产品版本、API 版本和 Vault 数据结构版本。�
 每个发布版在代码中声明：
 
 ```text
-app_version: 0.2.0
+app_version: 0.3.0
 api_versions: [1]
 vault_schema_min: 1
 vault_schema_max: 1
