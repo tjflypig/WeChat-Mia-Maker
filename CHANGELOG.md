@@ -4,6 +4,20 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-05
+
+### Added
+
+- Native doocs/md header action for publishing the current rendered and inlined WeChat HTML to the draft box.
+- Server-side preflight and single-use, ten-minute second-confirmation contract bound to the article ETag and rendered HTML hash.
+- Adapter for reusing the proven legacy `mia-core.publishHtml()` WeChat image, cover and `draft/add` pipeline on Tencent Cloud.
+- Desktop and mobile publishing feedback with version, image count and rendered HTML byte size.
+
+### Security
+
+- Markdown is never accepted as the publish snapshot; scripts are rejected and WeChat credentials remain server-side.
+- A changed article or replayed confirmation is rejected before calling the WeChat API.
+
 ## [0.5.0] - 2026-09-05
 
 ### Added

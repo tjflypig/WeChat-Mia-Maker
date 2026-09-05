@@ -125,6 +125,12 @@ export function setUseLegacyDocumentStorage(_enabled: boolean): void {}
 export function isUsingLegacyDocumentStorage(): boolean { return false }
 export function getLoadedDocuments(): Post[] | null { return cachedPosts }
 export function clearDocumentCache(): void { cachedPosts = null }
+export function getArticleSyncInfo(id: string) {
+  return {
+    etag: etagById.get(id) || ``,
+    metadata: splitDocument(syncedContentById.get(id) || ``).frontmatter,
+  }
+}
 
 export const documentRepo = {
   async loadAll(): Promise<Post[]> {

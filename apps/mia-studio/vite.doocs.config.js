@@ -8,9 +8,22 @@ import { defineConfig } from 'vite'
 const doocsSource = fileURLToPath(new URL(`../../vendor/doocs-md/apps/web/src`, import.meta.url))
 const cloudDocuments = fileURLToPath(new URL(`./src/doocs/cloud-documents.ts`, import.meta.url))
 const doocsStyles = fileURLToPath(new URL(`./src/doocs-source.css`, import.meta.url))
+const publishButton = fileURLToPath(new URL(`./src/doocs/MiaPublishButton.vue`, import.meta.url))
 
 export default defineConfig({
   plugins: [
+    {
+      name: `mia-doocs-publish-button`,
+      enforce: `pre`,
+      transform(code, id) {
+        if (!id.split(`?`)[0].endsWith(`/components/editor/editor-header/index.vue`))
+          return null
+        return code.replace(
+          `<script setup lang="ts">`,
+          `<script setup lang="ts">\nimport PostInfo from ${JSON.stringify(publishButton)}`,
+        )
+      },
+    },
     vue({
       template: {
         compilerOptions: { isCustomElement: tag => tag === `math-field` },

@@ -69,8 +69,8 @@ API 默认使用 `/v1`，支持登录会话、Bearer token、选题创建/立项
 
 ## Version
 
-The current application version is `0.5.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
+The current application version is `0.6.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## Status
 
-已实现 Markdown Vault、登录 API、Agent/Obsidian CLI 推送，以及 doocs/md 原生编辑、实时预览、模板、导出、AI 和图片工具的工作台宿主。下一主线是图片资产进入 Vault、发布预检、二次确认、微信草稿接口和发布快照回写 Obsidian。生产密钥、真实 Vault 内容和生成产物不得提交。
+已实现 Markdown Vault、登录 API、Agent/Obsidian CLI 推送、doocs/md 原生工作台，以及复用旧版微信引擎的“最终渲染 HTML → 预检 → 二次确认 → 微信草稿”链路。下一主线是发布回执与最终快照回写 Obsidian。生产密钥、真实 Vault 内容和生成产物不得提交。

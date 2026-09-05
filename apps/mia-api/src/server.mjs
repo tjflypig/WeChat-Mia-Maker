@@ -13,7 +13,8 @@ import {
   WorkspaceError,
 } from '@mia/workspace'
 
-const MAX_BODY_BYTES = 2 * 1024 * 1024
+const MAX_BODY_BYTES = 8 * 1024 * 1024
+const PUBLISH_CONFIRMATION_TTL_MS = 10 * 60 * 1000
 
 function safeEqual(left, right) {
   const a = Buffer.from(String(left))
@@ -106,6 +107,7 @@ export async function createMiaServer(options) {
     adminPassword,
     sessionSecret,
     apiToken = ``,
+    publisher = null,
     secureCookies = true,
     sessionTtlMs = 30 * 24 * 60 * 60 * 1000,
   } = options
@@ -114,6 +116,7 @@ export async function createMiaServer(options) {
     throw new Error(`vaultRoot, adminPassword and sessionSecret are required`)
   await initVault(vaultRoot)
   const expectedPassword = passwordDigest(adminPassword)
+  const pendingPublishes = new Map()
 
   function authenticated(req) {
     const bearer = String(req.headers.authorization || ``).replace(/^Bearer\s+/i, ``)
@@ -186,6 +189,91 @@ export async function createMiaServer(options) {
         const ifMatch = String(req.headers[`if-match`] || ``).replace(/^"|"$/g, ``)
         const article = await saveArticle(vaultRoot, articleRoute[0], String(body.content || ``), { ifMatch })
         return json(res, 200, publicEntity(article), { etag: `"${article.etag}"` })
+      }
+
+      const publishPreflight = match(pathname, /^\/v1\/articles\/([^/]+)\/publish\/preflight$/)
+      if (publishPreflight && req.method === `POST`) {
+        if (!publisher)
+          return json(res, 503, { error: { code: `publisher_unavailable`, message: `微信发布服务尚未配置` } })
+        const article = await getArticle(vaultRoot, publishPreflight[0])
+        const ifMatch = String(req.headers[`if-match`] || ``).replace(/^"|"$/g, ``)
+        if (!ifMatch)
+          throw new WorkspaceError(`precondition_required`, `If-Match is required`, { currentEtag: article.etag })
+        if (ifMatch !== article.etag)
+          throw new WorkspaceError(`conflict`, `Article changed before publishing`, { currentEtag: article.etag })
+        const body = await readJson(req)
+        const html = String(body.html || ``).trim()
+        if (!html)
+          return json(res, 400, { error: { code: `empty_rendered_html`, message: `渲染后的 HTML 为空` } })
+        if (/<script\b/i.test(html))
+          return json(res, 400, { error: { code: `unsafe_rendered_html`, message: `渲染 HTML 不允许包含 script` } })
+
+        const confirmationId = randomUUID()
+        const snapshotHash = createHash(`sha256`).update(html).digest(`hex`)
+        const expiresAt = Date.now() + PUBLISH_CONFIRMATION_TTL_MS
+        for (const [id, pending] of pendingPublishes) {
+          if (pending.expiresAt <= Date.now() || pending.articleId === article.id)
+            pendingPublishes.delete(id)
+        }
+        const snapshot = {
+          articleId: article.id,
+          articleEtag: article.etag,
+          revision: Number(article.frontmatter.revision || 0),
+          html,
+          snapshotHash,
+          title: String(body.title || article.frontmatter.title || article.id),
+          author: String(body.author || article.frontmatter.author || ``),
+          cover: String(body.cover || article.frontmatter.cover || ``),
+          expiresAt,
+        }
+        pendingPublishes.set(confirmationId, snapshot)
+        return json(res, 200, {
+          confirmationId,
+          expiresAt: new Date(expiresAt).toISOString(),
+          snapshotHash,
+          articleId: article.id,
+          revision: snapshot.revision,
+          title: snapshot.title,
+          htmlBytes: Buffer.byteLength(html),
+          imageCount: (html.match(/<img\b/gi) || []).length,
+        })
+      }
+
+      const publishConfirm = match(pathname, /^\/v1\/articles\/([^/]+)\/publish\/confirm$/)
+      if (publishConfirm && req.method === `POST`) {
+        if (!publisher)
+          return json(res, 503, { error: { code: `publisher_unavailable`, message: `微信发布服务尚未配置` } })
+        const body = await readJson(req)
+        const confirmationId = String(body.confirmationId || ``)
+        const snapshot = pendingPublishes.get(confirmationId)
+        pendingPublishes.delete(confirmationId)
+        if (!snapshot || snapshot.articleId !== publishConfirm[0] || snapshot.expiresAt <= Date.now())
+          return json(res, 410, { error: { code: `confirmation_expired`, message: `发布确认已失效，请重新预检` } })
+        const article = await getArticle(vaultRoot, snapshot.articleId)
+        if (article.etag !== snapshot.articleEtag)
+          throw new WorkspaceError(`conflict`, `Article changed after preflight`, { currentEtag: article.etag })
+        const logs = []
+        let result
+        try {
+          result = await publisher.publishHtml({
+            html: snapshot.html,
+            title: snapshot.title,
+            author: snapshot.author || undefined,
+            cover: snapshot.cover || undefined,
+            log: (...items) => logs.push(items.join(` `)),
+          })
+        }
+        catch (error) {
+          error.status = 502
+          throw error
+        }
+        return json(res, 200, {
+          ...result,
+          articleId: snapshot.articleId,
+          revision: snapshot.revision,
+          snapshotHash: snapshot.snapshotHash,
+          logs,
+        })
       }
 
       return json(res, 404, { error: { code: `not_found`, message: `${req.method} ${pathname}` } })

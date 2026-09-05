@@ -65,3 +65,73 @@ test(`serves authenticated article APIs and rejects stale writes`, async () => {
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test(`publishes the confirmed doocs rendered HTML snapshot`, async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), `mia-publish-test-`))
+  const calls = []
+  const server = await createMiaServer({
+    vaultRoot: root,
+    adminPassword: `test-password`,
+    sessionSecret: `test-session-secret`,
+    secureCookies: false,
+    publisher: {
+      async publishHtml(options) {
+        calls.push(options)
+        options.log(`HTML snapshot accepted`)
+        return { media_id: `wechat-draft-media-id`, title: options.title, author: options.author || `` }
+      },
+    },
+  })
+  await new Promise(resolve => server.listen(0, `127.0.0.1`, resolve))
+  const base = `http://127.0.0.1:${server.address().port}`
+
+  try {
+    const login = await fetch(`${base}/v1/auth/login`, {
+      method: `POST`,
+      headers: { 'content-type': `application/json` },
+      body: JSON.stringify({ password: `test-password` }),
+    })
+    const cookie = login.headers.get(`set-cookie`).split(`;`)[0]
+    const createdResponse = await fetch(`${base}/v1/articles`, {
+      method: `POST`,
+      headers: { 'content-type': `application/json`, cookie },
+      body: JSON.stringify({ title: `HTML 发布测试`, body: `# Markdown 不应发给微信\n` }),
+    })
+    const article = await createdResponse.json()
+    const html = `<section style="color:#123456"><p>doocs 最终排版</p></section>`
+    const preflightResponse = await fetch(`${base}/v1/articles/${article.id}/publish/preflight`, {
+      method: `POST`,
+      headers: { 'content-type': `application/json`, cookie, 'if-match': `"${article.etag}"` },
+      body: JSON.stringify({ html, title: `最终标题` }),
+    })
+    assert.equal(preflightResponse.status, 200)
+    const preflight = await preflightResponse.json()
+    assert.equal(preflight.revision, 1)
+    assert.equal(preflight.imageCount, 0)
+
+    const confirmResponse = await fetch(`${base}/v1/articles/${article.id}/publish/confirm`, {
+      method: `POST`,
+      headers: { 'content-type': `application/json`, cookie },
+      body: JSON.stringify({ confirmationId: preflight.confirmationId }),
+    })
+    assert.equal(confirmResponse.status, 200)
+    const confirmed = await confirmResponse.json()
+    assert.equal(confirmed.media_id, `wechat-draft-media-id`)
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].html, html)
+    assert.equal(calls[0].title, `最终标题`)
+    assert.doesNotMatch(calls[0].html, /Markdown 不应发给微信/)
+
+    const replay = await fetch(`${base}/v1/articles/${article.id}/publish/confirm`, {
+      method: `POST`,
+      headers: { 'content-type': `application/json`, cookie },
+      body: JSON.stringify({ confirmationId: preflight.confirmationId }),
+    })
+    assert.equal(replay.status, 410)
+    assert.equal(calls.length, 1)
+  }
+  finally {
+    await new Promise(resolve => server.close(resolve))
+    await rm(root, { recursive: true, force: true })
+  }
+})
