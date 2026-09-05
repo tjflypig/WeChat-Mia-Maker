@@ -341,6 +341,69 @@ export async function saveArticle(root, id, content, { ifMatch, now = new Date()
   return readEntity(current.file)
 }
 
+export async function recordPublishReceipt(root, id, {
+  renderedHtml,
+  snapshotHash,
+  revision,
+  result,
+  logs = [],
+  now = new Date(),
+} = {}) {
+  const article = await getArticle(root, id)
+  if (!String(renderedHtml || ``).trim())
+    throw new WorkspaceError(`empty_rendered_html`, `Rendered HTML is required`)
+
+  const receiptId = `publish-${compactStamp(now)}-${randomUUID().slice(0, 8)}`
+  const directory = path.join(path.dirname(article.file), `publish`, receiptId)
+  const publishedAt = nowIso(now)
+  const receipt = {
+    schemaVersion: 1,
+    receiptId,
+    articleId: article.id,
+    revision: Number(revision || article.frontmatter.revision || 0),
+    articleEtag: article.etag,
+    snapshotHash: String(snapshotHash || createHash(`sha256`).update(renderedHtml).digest(`hex`)),
+    publishedAt,
+    mediaId: result?.media_id || null,
+    title: result?.title || article.frontmatter.title || article.id,
+    author: result?.author || article.frontmatter.author || ``,
+    logs: logs.map(String),
+    artifacts: {
+      markdown: `source.md`,
+      renderedHtml: `rendered.html`,
+    },
+  }
+
+  await mkdir(directory, { recursive: true })
+  await Promise.all([
+    atomicWrite(path.join(directory, receipt.artifacts.markdown), article.content),
+    atomicWrite(path.join(directory, receipt.artifacts.renderedHtml), String(renderedHtml)),
+    atomicWrite(path.join(directory, `receipt.json`), `${JSON.stringify(receipt, null, 2)}\n`),
+  ])
+  return receipt
+}
+
+export async function listPublishReceipts(root, id) {
+  const article = await getArticle(root, id)
+  const directory = path.join(path.dirname(article.file), `publish`)
+  if (!await exists(directory))
+    return []
+  const entries = await readdir(directory, { withFileTypes: true })
+  const receipts = []
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.startsWith(`publish-`))
+      continue
+    try {
+      receipts.push(JSON.parse(await readFile(path.join(directory, entry.name, `receipt.json`), `utf8`)))
+    }
+    catch (error) {
+      if (error?.code !== `ENOENT`)
+        throw error
+    }
+  }
+  return receipts.sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)))
+}
+
 export async function promoteTopic(root, id, { now = new Date() } = {}) {
   const topic = await getTopic(root, id)
   if (topic.frontmatter.promoted_to)

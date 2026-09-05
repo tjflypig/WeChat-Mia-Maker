@@ -6,9 +6,11 @@ import {
   getArticle,
   initVault,
   listArticles,
+  listPublishReceipts,
   listTopics,
   promoteTopic,
   publicEntity,
+  recordPublishReceipt,
   saveArticle,
   WorkspaceError,
 } from '@mia/workspace'
@@ -191,6 +193,10 @@ export async function createMiaServer(options) {
         return json(res, 200, publicEntity(article), { etag: `"${article.etag}"` })
       }
 
+      const publishReceipts = match(pathname, /^\/v1\/articles\/([^/]+)\/publish\/receipts$/)
+      if (publishReceipts && req.method === `GET`)
+        return json(res, 200, { receipts: await listPublishReceipts(vaultRoot, publishReceipts[0]) })
+
       const publishPreflight = match(pathname, /^\/v1\/articles\/([^/]+)\/publish\/preflight$/)
       if (publishPreflight && req.method === `POST`) {
         if (!publisher)
@@ -267,12 +273,28 @@ export async function createMiaServer(options) {
           error.status = 502
           throw error
         }
+        let receipt = null
+        let receiptWarning = null
+        try {
+          receipt = await recordPublishReceipt(vaultRoot, snapshot.articleId, {
+            renderedHtml: snapshot.html,
+            snapshotHash: snapshot.snapshotHash,
+            revision: snapshot.revision,
+            result,
+            logs,
+          })
+        }
+        catch (error) {
+          receiptWarning = `微信草稿已创建，但本地发布回执保存失败：${error.message}`
+        }
         return json(res, 200, {
           ...result,
           articleId: snapshot.articleId,
           revision: snapshot.revision,
           snapshotHash: snapshot.snapshotHash,
           logs,
+          receipt,
+          receiptWarning,
         })
       }
 

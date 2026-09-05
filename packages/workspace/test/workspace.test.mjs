@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -12,6 +12,7 @@ import {
   listArticles,
   listTopics,
   promoteTopic,
+  recordPublishReceipt,
   saveArticle,
   VAULT_SCHEMA_VERSION,
   WorkspaceError,
@@ -27,6 +28,25 @@ test(`initializes the expected schema`, () => withVault(async (root) => {
   const result = await initVault(root)
   assert.equal(result.schemaVersion, VAULT_SCHEMA_VERSION)
   assert.equal((await readFile(path.join(root, `.mia/schema-version`), `utf8`)).trim(), `1`)
+}))
+
+test(`records immutable Markdown, rendered HTML and WeChat receipt artifacts`, () => withVault(async (root) => {
+  const article = await createArticle(root, { title: `发布归档测试`, body: `# Markdown 源稿\n` })
+  const html = `<section><p>doocs 渲染稿</p></section>`
+  const receipt = await recordPublishReceipt(root, article.id, {
+    renderedHtml: html,
+    snapshotHash: `fixed-hash`,
+    revision: 1,
+    result: { media_id: `wechat-media-id`, title: `发布归档测试` },
+    logs: [`draft/add ok`],
+    now: new Date(`2026-09-05T12:34:56.000Z`),
+  })
+  const articleDirectory = path.dirname(article.file)
+  const receiptDirectory = path.join(articleDirectory, `publish`, receipt.receiptId)
+  assert.equal(await readFile(path.join(receiptDirectory, `source.md`), `utf8`), article.content)
+  assert.equal(await readFile(path.join(receiptDirectory, `rendered.html`), `utf8`), html)
+  assert.equal(JSON.parse(await readFile(path.join(receiptDirectory, `receipt.json`), `utf8`)).mediaId, `wechat-media-id`)
+  assert.deepEqual((await readdir(receiptDirectory)).sort(), [`receipt.json`, `rendered.html`, `source.md`])
 }))
 
 test(`creates, lists and promotes a topic`, () => withVault(async (root) => {

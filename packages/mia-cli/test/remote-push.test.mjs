@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import { createMiaServer } from '../../../apps/mia-api/src/server.mjs'
 import { pushArticle } from '../src/remote-push.mjs'
+import { pullArticleToFile } from '../src/remote-pull.mjs'
 
 test(`pushes a Markdown draft and updates the same Studio article`, async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), `mia-cli-push-test-`))
@@ -52,4 +53,39 @@ test(`requires an API token before sending a draft`, async () => {
     pushArticle({ content: `# 草稿\n` }),
     error => error.code === `missing_api_token`,
   )
+})
+
+test(`pulls a Studio article back to its matching Obsidian file with a backup`, async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), `mia-cli-pull-test-`))
+  const apiToken = `test-api-token`
+  const server = await createMiaServer({
+    vaultRoot: path.join(root, `vault`),
+    adminPassword: `test-password`,
+    sessionSecret: `test-session-secret`,
+    apiToken,
+    secureCookies: false,
+  })
+  await new Promise(resolve => server.listen(0, `127.0.0.1`, resolve))
+  const apiUrl = `http://127.0.0.1:${server.address().port}`
+
+  try {
+    const article = await pushArticle({ apiUrl, apiToken, content: `# 云端成稿\n\n最终正文。\n` })
+    const file = path.join(root, `Obsidian.md`)
+    const previous = `---\nid: "${article.id}"\n---\n# 本地旧稿\n`
+    await writeFile(file, previous, `utf8`)
+    const pulled = await pullArticleToFile({ apiUrl, apiToken, id: article.id, file })
+    assert.equal(await readFile(file, `utf8`), article.content)
+    assert.equal(await readFile(pulled.backupFile, `utf8`), previous)
+
+    const unrelated = path.join(root, `另一篇.md`)
+    await writeFile(unrelated, `---\nid: "article-unrelated-0001"\n---\n# 不应覆盖\n`, `utf8`)
+    await assert.rejects(
+      pullArticleToFile({ apiUrl, apiToken, id: article.id, file: unrelated }),
+      error => error.code === `pull_target_mismatch`,
+    )
+  }
+  finally {
+    await new Promise(resolve => server.close(resolve))
+    await rm(root, { recursive: true, force: true })
+  }
 })

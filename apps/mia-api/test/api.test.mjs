@@ -121,6 +121,16 @@ test(`publishes the confirmed doocs rendered HTML snapshot`, async () => {
     assert.equal(calls[0].html, html)
     assert.equal(calls[0].title, `最终标题`)
     assert.doesNotMatch(calls[0].html, /Markdown 不应发给微信/)
+    assert.equal(confirmed.receipt.mediaId, `wechat-draft-media-id`)
+
+    const receiptsResponse = await fetch(`${base}/v1/articles/${article.id}/publish/receipts`, {
+      headers: { cookie },
+    })
+    assert.equal(receiptsResponse.status, 200)
+    const receipts = (await receiptsResponse.json()).receipts
+    assert.equal(receipts.length, 1)
+    assert.equal(receipts[0].snapshotHash, preflight.snapshotHash)
+    assert.equal(receipts[0].artifacts.renderedHtml, `rendered.html`)
 
     const replay = await fetch(`${base}/v1/articles/${article.id}/publish/confirm`, {
       method: `POST`,

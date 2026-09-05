@@ -65,12 +65,20 @@ pnpm mia article push "/绝对路径/草稿.md"
 
 首次推送成功后，CLI 会把 Studio 文章 ID 写入源文件 frontmatter。之后重复执行同一命令会更新同一篇文章，不会新建重复稿件；如不希望修改源文件，可加 `--no-write-id`。
 
+在 Studio 完成图片、排版和发布后，可将云端规范 Markdown 拉回 Obsidian：
+
+```bash
+pnpm mia article pull "article-id" --file "/绝对路径/Obsidian文章.md"
+```
+
+同一文章 ID 的本地文件会被更新；内容不同时，旧稿先保存为 `.mia-backup`。目标文件属于另一文章时默认拒绝覆盖，确认需要覆盖时才使用 `--force`。服务器无法直接写入个人电脑磁盘，因此这条 CLI 命令也是 Agent、Obsidian 自动化和定时同步的可靠边界。
+
 API 默认使用 `/v1`，支持登录会话、Bearer token、选题创建/立项、文章创建/读写。文章写入必须携带 `If-Match` ETag，防止电脑、手机和 Agent 相互覆盖。
 
 ## Version
 
-The current application version is `0.6.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
+The current application version is `0.7.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## Status
 
-已实现 Markdown Vault、登录 API、Agent/Obsidian CLI 推送、doocs/md 原生工作台，以及复用旧版微信引擎的“最终渲染 HTML → 预检 → 二次确认 → 微信草稿”链路。下一主线是发布回执与最终快照回写 Obsidian。生产密钥、真实 Vault 内容和生成产物不得提交。
+已实现 Markdown Vault、登录 API、Agent/Obsidian CLI 双向同步、doocs/md 原生工作台，以及复用旧版微信引擎的“最终渲染 HTML → 预检 → 二次确认 → 微信草稿 → 不可变回执归档”链路。生产密钥、真实 Vault 内容和生成产物不得提交。

@@ -63,7 +63,10 @@ async function publishToWechat() {
       method: `POST`,
       body: JSON.stringify({ confirmationId: preflight.confirmationId }),
     })
-    toast.success(`已推送到微信草稿箱：${result.title}`)
+    if (result.receiptWarning)
+      toast.warning(result.receiptWarning)
+    else
+      toast.success(`已推送到微信草稿箱并保存发布快照：${result.title}`)
   }
   catch (error) {
     toast.error(`发布失败：${error instanceof Error ? error.message : String(error)}`)

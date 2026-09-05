@@ -4,6 +4,19 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-05
+
+### Added
+
+- Immutable per-publish folders containing the canonical Markdown, exact doocs rendered HTML sent to the publisher, and the WeChat draft receipt.
+- Authenticated publish receipt listing endpoint.
+- `mia article pull <article-id> --file <path>` for bringing the Studio version back into Obsidian or an Agent workspace.
+- Recoverable pull behavior with `.mia-backup` and article-ID mismatch protection.
+
+### Fixed
+
+- A successful WeChat draft no longer appears to fail when only receipt persistence fails; the API returns the draft result with an explicit archive warning to prevent duplicate retries.
+
 ## [0.6.0] - 2026-09-05
 
 ### Added

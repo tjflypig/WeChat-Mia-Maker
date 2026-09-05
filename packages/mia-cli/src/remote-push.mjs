@@ -45,6 +45,18 @@ async function request(apiUrl, apiToken, pathname, options = {}) {
   return body
 }
 
+export async function fetchArticle({
+  apiUrl = `http://127.0.0.1:8787`,
+  apiToken,
+  id,
+}) {
+  if (!apiToken)
+    throw new MiaApiError(0, `missing_api_token`, `MIA_API_TOKEN or --token is required`)
+  if (!id)
+    throw new MiaApiError(0, `missing_article_id`, `Article id is required`)
+  return request(apiUrl, apiToken, `/articles/${encodeURIComponent(id)}`)
+}
+
 function titleFrom(content, preferred, fallback) {
   const metadata = parseFrontmatter(content)
   const heading = splitFrontmatter(content).body.match(/^#\s+(.+)$/m)?.[1]
