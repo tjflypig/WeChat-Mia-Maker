@@ -3,17 +3,21 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import {
+  atomicWrite,
   createArticle,
   createTopic,
   getArticle,
   initVault,
   listArticles,
   listTopics,
+  parseFrontmatter,
+  patchFrontmatter,
   promoteTopic,
   publicEntity,
   saveArticle,
   WorkspaceError,
 } from '@mia/workspace'
+import { MiaApiError, pushArticle } from './remote-push.mjs'
 
 function takeOption(args, name, fallback) {
   const index = args.indexOf(name)
@@ -45,12 +49,20 @@ Usage:
   mia article create <title> [--vault path] [--json]
   mia article show <article-id> [--vault path] [--json]
   mia article write <article-id> --file article.md --if-match <etag> [--vault path] [--json]
+  mia article push <file.md> [--api url] [--token token] [--id article-id] [--title title] [--no-write-id] [--json]
+
+Remote push defaults:
+  --api    MIA_API_URL or http://127.0.0.1:8787
+  --token  MIA_API_TOKEN (environment variable recommended)
 `
 }
 
 const args = process.argv.slice(2)
 const jsonOutput = takeFlag(args, `--json`)
+const noWriteId = takeFlag(args, `--no-write-id`)
 const vaultRoot = path.resolve(takeOption(args, `--vault`, process.env.MIA_VAULT_ROOT || `vault`))
+const apiUrl = takeOption(args, `--api`, process.env.MIA_API_URL || `http://127.0.0.1:8787`)
+const apiToken = takeOption(args, `--token`, process.env.MIA_API_TOKEN || ``)
 const [group, action, ...positionals] = args
 
 function output(value) {
@@ -106,13 +118,34 @@ try {
       throw new WorkspaceError(`missing_file`, `--file is required`)
     output(publicEntity(await saveArticle(vaultRoot, id, await readFile(path.resolve(file), `utf8`), { ifMatch })))
   }
+  else if (group === `article` && action === `push`) {
+    const file = positionals.shift()
+    if (!file)
+      throw new WorkspaceError(`missing_file`, `Markdown file is required`)
+    const absoluteFile = path.resolve(file)
+    const content = await readFile(absoluteFile, `utf8`)
+    const result = await pushArticle({
+      apiUrl,
+      apiToken,
+      content,
+      id: takeOption(positionals, `--id`),
+      title: takeOption(positionals, `--title`),
+      fallbackTitle: path.basename(file, path.extname(file)),
+    })
+    const shouldWriteId = !noWriteId && !parseFrontmatter(content).id
+    if (shouldWriteId)
+      await atomicWrite(absoluteFile, patchFrontmatter(content, { id: result.id }))
+    output(jsonOutput
+      ? { ...result, sourceFile: absoluteFile, sourceUpdated: shouldWriteId }
+      : `已推送到 Mia Studio：${result.id}${shouldWriteId ? `（文章 ID 已写回源文件）` : ``}`)
+  }
   else {
     console.error(usage())
     throw new WorkspaceError(`unknown_command`, `Unknown command: ${args.join(` `)}`)
   }
 }
 catch (error) {
-  const code = error instanceof WorkspaceError ? error.code : `unexpected_error`
+  const code = error instanceof WorkspaceError || error instanceof MiaApiError ? error.code : `unexpected_error`
   const body = { error: { code, message: error.message, details: error.details } }
   console.error(jsonOutput ? JSON.stringify(body) : `${code}: ${error.message}`)
   process.exitCode = 1

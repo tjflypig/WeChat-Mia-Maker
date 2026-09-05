@@ -7,6 +7,7 @@ import { defineConfig } from 'vite'
 
 const doocsSource = fileURLToPath(new URL(`../../vendor/doocs-md/apps/web/src`, import.meta.url))
 const cloudDocuments = fileURLToPath(new URL(`./src/doocs/cloud-documents.ts`, import.meta.url))
+const doocsStyles = fileURLToPath(new URL(`./src/doocs-source.css`, import.meta.url))
 
 export default defineConfig({
   plugins: [
@@ -28,6 +29,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
+      { find: `@/assets/index.css`, replacement: doocsStyles },
       { find: `@/storage/repositories/documents`, replacement: cloudDocuments },
       { find: `@`, replacement: doocsSource },
     ],

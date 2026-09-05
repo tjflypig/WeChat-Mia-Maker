@@ -28,4 +28,5 @@ data/
 *.log
 .cache/
 .playwright-cli/
+output/playwright/
 tmp/

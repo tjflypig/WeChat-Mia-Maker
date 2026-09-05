@@ -2,7 +2,7 @@
 
 Mia Studio 是一个自托管的微信公众号创作工作台，覆盖选题、素材、编辑、AI 辅助、微信预览和草稿发布。
 
-项目使用 doocs/md 的编辑与渲染能力作为发动机，但建立独立的产品外壳、腾讯云本地数据层、CLI 和 Agent/MCP 接口。
+项目使用 doocs/md 的原生 Web 编辑器与渲染能力作为发动机，在其外围接入腾讯云本地数据层、CLI、Agent/MCP 和微信发布服务。
 
 ## Core principles
 
@@ -23,7 +23,7 @@ packages/
   mia-cli/             `mia` command line
 ```
 
-`mia-studio`、doocs/md adapter、AI、微信发布和 MCP 将沿着同一领域模型逐步接入，不会复制一套平行数据。
+`mia-studio` 直接宿主 doocs/md 的 CodeMirror、实时预览、模板、导出、AI、图片和历史版本能力，不维护第二套编辑器。
 
 doocs/md 的导出、一键换模板、社区模板、文字统计、实时预览、图片处理、AI、历史版本等能力默认全部保留，详见 [doocs/md 能力引入清单](docs/DOOCS-CAPABILITY-MAP.md)。
 
@@ -55,12 +55,22 @@ pnpm api
 pnpm studio
 ```
 
+Agent 或 Obsidian 完成草稿后，通过 CLI 推送到 Studio：
+
+```bash
+export MIA_API_URL="https://你的-mia-studio-地址"
+export MIA_API_TOKEN="服务端配置的-token"
+pnpm mia article push "/绝对路径/草稿.md"
+```
+
+首次推送成功后，CLI 会把 Studio 文章 ID 写入源文件 frontmatter。之后重复执行同一命令会更新同一篇文章，不会新建重复稿件；如不希望修改源文件，可加 `--no-write-id`。
+
 API 默认使用 `/v1`，支持登录会话、Bearer token、选题创建/立项、文章创建/读写。文章写入必须携带 `If-Match` ETag，防止电脑、手机和 Agent 相互覆盖。
 
 ## Version
 
-The current application-shell version is `0.3.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
+The current application version is `0.5.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## Status
 
-Phase 1 已实现 Markdown Vault、登录 API、CLI 和桌面/手机统一工作台。当前预览是明确标识的基础预览；doocs/md 最终渲染、AI 网关和微信草稿接口尚未接入。生产密钥、真实 Vault 内容和生成产物不得提交。
+已实现 Markdown Vault、登录 API、Agent/Obsidian CLI 推送，以及 doocs/md 原生编辑、实时预览、模板、导出、AI 和图片工具的工作台宿主。下一主线是图片资产进入 Vault、发布预检、二次确认、微信草稿接口和发布快照回写 Obsidian。生产密钥、真实 Vault 内容和生成产物不得提交。

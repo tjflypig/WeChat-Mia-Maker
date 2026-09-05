@@ -1,0 +1,5 @@
+@import '../../../vendor/doocs-md/apps/web/src/assets/index.css';
+
+/* Mia's Vite root is outside the vendored doocs workspace. */
+@source '../../../vendor/doocs-md/apps/web/src';
+@source '../../../vendor/doocs-md/packages/shared/src';

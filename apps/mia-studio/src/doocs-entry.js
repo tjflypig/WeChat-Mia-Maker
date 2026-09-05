@@ -35,7 +35,7 @@ function showLogin() {
     </main>`
 
   const form = app.querySelector(`form`)
-  const input = app.querySelector(`input`)
+  const input = app.querySelector(`#mia-password`)
   const button = app.querySelector(`button`)
   const error = app.querySelector(`.mia-login-error`)
   input.focus()

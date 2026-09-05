@@ -4,6 +4,19 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-05
+
+### Added
+
+- `mia article push <file.md>` for Agent and Obsidian drafts to enter Mia Studio through the authenticated API.
+- Stable article identity written back to source frontmatter after the first successful push.
+- Repeat pushes update the same article with ETag protection while preserving Studio-managed metadata.
+
+### Fixed
+
+- Restored the full doocs/md Tailwind source scan in Mia's independent Vite build; editor, preview, menus and responsive utilities no longer render as an unstyled jumble.
+- Corrected the login gate password selector so the hidden username field cannot be submitted as the password.
+
 ## [0.4.0] - 2026-09-04
 
 ### Added
