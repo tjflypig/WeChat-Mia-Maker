@@ -41,3 +41,5 @@ Radar sources normalize into candidate topic files. Candidates retain source and
 ## Publishing
 
 Publishing snapshots a specific article revision, validates metadata and assets, renders through the doocs/md engine, moves images to the official WeChat CDN, uploads the cover, calls `draft/add`, and records an immutable receipt. The complete preflight and publish flow is available on desktop and mobile.
+
+The production Nginx route must use `location ^~ /v1/` as shown in [`deploy/nginx/mia-studio-8088.conf`](../deploy/nginx/mia-studio-8088.conf). Signed Vault asset URLs end in image extensions; a plain prefix location can otherwise lose precedence to the static-file regular expression and return 404 before the API sees the request.
