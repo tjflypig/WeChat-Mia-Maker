@@ -19,10 +19,12 @@ export default defineConfig({
       transform(code, id) {
         if (!id.split(`?`)[0].endsWith(`/components/editor/editor-header/index.vue`))
           return null
-        return code.replace(
-          `<script setup lang="ts">`,
-          `<script setup lang="ts">\nimport PostInfo from ${JSON.stringify(publishButton)}`,
-        )
+        return code
+          .replace(
+            `<script setup lang="ts">`,
+            `<script setup lang="ts">\nimport PostInfo from ${JSON.stringify(publishButton)}`,
+          )
+          .replace(`<PostInfo class="hidden md:inline-flex" />`, `<PostInfo class="inline-flex" />`)
       },
     },
     vue({

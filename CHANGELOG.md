@@ -4,6 +4,12 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-09-08
+
+### Fixed
+
+- Restored the Mia cover and WeChat draft actions in the native doocs mobile header.
+
 ## [0.8.0] - 2026-09-08
 
 ### Added
