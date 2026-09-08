@@ -4,6 +4,12 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-09-08
+
+### Changed
+
+- Replaced upstream doocs product, feedback and donation links with Mia Studio and its credited doocs/md rendering-engine references.
+
 ## [0.8.1] - 2026-09-08
 
 ### Fixed

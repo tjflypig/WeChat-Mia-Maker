@@ -9,6 +9,7 @@ const doocsSource = fileURLToPath(new URL(`../../vendor/doocs-md/apps/web/src`, 
 const cloudDocuments = fileURLToPath(new URL(`./src/doocs/cloud-documents.ts`, import.meta.url))
 const doocsStyles = fileURLToPath(new URL(`./src/doocs-source.css`, import.meta.url))
 const publishButton = fileURLToPath(new URL(`./src/doocs/MiaPublishButton.vue`, import.meta.url))
+const helpDropdown = fileURLToPath(new URL(`./src/doocs/MiaHelpDropdown.vue`, import.meta.url))
 const miaUpload = fileURLToPath(new URL(`./src/doocs/mia-upload.ts`, import.meta.url))
 
 export default defineConfig({
@@ -20,6 +21,7 @@ export default defineConfig({
         if (!id.split(`?`)[0].endsWith(`/components/editor/editor-header/index.vue`))
           return null
         return code
+          .replace(`import HelpDropdown from './HelpDropdown.vue'`, `import HelpDropdown from ${JSON.stringify(helpDropdown)}`)
           .replace(
             `<script setup lang="ts">`,
             `<script setup lang="ts">\nimport PostInfo from ${JSON.stringify(publishButton)}`,
