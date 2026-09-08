@@ -45,6 +45,21 @@ test(`serves authenticated article APIs and rejects stale writes`, async () => {
     assert.match(created.content, /# Doocs \u6b63\u6587/)
     const originalEtag = created.etag
 
+    const image = Buffer.from([0x89, 0x50, 0x4E, 0x47])
+    const uploadResponse = await fetch(`${base}/v1/articles/${created.id}/assets`, {
+      method: `POST`,
+      headers: { cookie, 'content-type': `image/png`, 'x-mia-filename': encodeURIComponent(`封面.png`) },
+      body: image,
+    })
+    assert.equal(uploadResponse.status, 201)
+    const uploaded = await uploadResponse.json()
+    assert.match(uploaded.url, /^http:\/\/127\.0\.0\.1:\d+\/v1\/articles\//)
+    const imageResponse = await fetch(uploaded.url)
+    assert.equal(imageResponse.status, 200)
+    assert.equal(imageResponse.headers.get(`content-type`), `image/png`)
+    assert.deepEqual(Buffer.from(await imageResponse.arrayBuffer()), image)
+    assert.equal((await fetch(uploaded.url.replace(/token=[^&]+/, `token=bad`))).status, 403)
+
     const savedResponse = await fetch(`${base}/v1/articles/${created.id}`, {
       method: `PUT`,
       headers: { 'content-type': `application/json`, cookie, 'if-match': `"${originalEtag}"` },

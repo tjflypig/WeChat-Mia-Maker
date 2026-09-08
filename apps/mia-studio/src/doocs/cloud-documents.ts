@@ -11,6 +11,7 @@ type Article = {
 const frontmatterById = new Map<string, string>()
 const etagById = new Map<string, string>()
 const syncedContentById = new Map<string, string>()
+const metadataById = new Map<string, Record<string, unknown>>()
 let cachedPosts: Post[] | null = null
 let writeQueue: Promise<void> = Promise.resolve()
 
@@ -54,6 +55,7 @@ function toPost(article: Article): Post {
   frontmatterById.set(article.id, frontmatter)
   etagById.set(article.id, article.etag)
   syncedContentById.set(article.id, article.content)
+  metadataById.set(article.id, article.frontmatter)
   const created = String(article.frontmatter.created_at || Date.now())
   const updated = String(article.frontmatter.updated_at || created)
   return {
@@ -98,6 +100,7 @@ async function saveCloudPost(post: Post) {
     frontmatterById.set(post.id, parts.frontmatter)
     etagById.set(post.id, article.etag)
     syncedContentById.set(post.id, article.content)
+    metadataById.set(post.id, article.frontmatter)
     updateCache(post)
     return
   }
@@ -118,6 +121,7 @@ async function saveCloudPost(post: Post) {
   frontmatterById.set(post.id, splitDocument(article.content).frontmatter)
   etagById.set(post.id, article.etag)
   syncedContentById.set(post.id, article.content)
+  metadataById.set(post.id, article.frontmatter)
   updateCache(post)
 }
 
@@ -128,8 +132,34 @@ export function clearDocumentCache(): void { cachedPosts = null }
 export function getArticleSyncInfo(id: string) {
   return {
     etag: etagById.get(id) || ``,
-    metadata: splitDocument(syncedContentById.get(id) || ``).frontmatter,
+    metadata: metadataById.get(id) || {},
   }
+}
+
+export async function updateArticleMetadata(id: string, changes: Record<string, string>) {
+  const current = syncedContentById.get(id)
+  const currentEtag = etagById.get(id)
+  if (!current || !currentEtag)
+    throw new Error(`文章尚未同步到腾讯云`)
+  let { frontmatter, body } = splitDocument(current)
+  for (const [key, value] of Object.entries(changes)) {
+    const line = `${key}: ${JSON.stringify(value)}`
+    const expression = new RegExp(`^${key}:.*$`, `m`)
+    frontmatter = expression.test(frontmatter)
+      ? frontmatter.replace(expression, line)
+      : frontmatter.replace(/\n---\r?\n?$/, `\n${line}\n---\n`)
+  }
+  const result = await api(`/articles/${encodeURIComponent(id)}`, {
+    method: `PUT`,
+    headers: { 'if-match': `"${currentEtag}"` },
+    body: JSON.stringify({ content: `${frontmatter}${body}` }),
+  })
+  const article = { ...result.body, etag: result.etag } as Article
+  frontmatterById.set(id, splitDocument(article.content).frontmatter)
+  etagById.set(id, article.etag)
+  syncedContentById.set(id, article.content)
+  metadataById.set(id, article.frontmatter)
+  return article
 }
 
 export const documentRepo = {
@@ -172,5 +202,6 @@ export const documentRepo = {
     frontmatterById.clear()
     etagById.clear()
     syncedContentById.clear()
+    metadataById.clear()
   },
 }

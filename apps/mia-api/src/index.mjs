@@ -10,6 +10,7 @@ const server = await createMiaServer({
   adminPassword: process.env.MIA_ADMIN_PASSWORD,
   sessionSecret: process.env.MIA_SESSION_SECRET,
   apiToken: process.env.MIA_API_TOKEN,
+  publicUrl: process.env.MIA_PUBLIC_URL,
   publisher: createLegacyPublisher({
     corePath: process.env.MIA_PUBLISHER_CORE,
     envPath: process.env.MIA_PUBLISHER_ENV,

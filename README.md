@@ -75,9 +75,11 @@ pnpm mia article pull "article-id" --file "/绝对路径/Obsidian文章.md"
 
 API 默认使用 `/v1`，支持登录会话、Bearer token、选题创建/立项、文章创建/读写。文章写入必须携带 `If-Match` ETag，防止电脑、手机和 Agent 相互覆盖。
 
+编辑器中的图片上传会直接写入当前文章的 `assets/` 目录，不需要配置第三方图床。顶部“封面”按钮用于上传并绑定文章封面；发布时，腾讯云上的旧版微信发布引擎会读取这些签名素材地址，将正文图片和封面转存到微信 CDN，再提交最终 doocs 渲染 HTML。生产环境需设置 `MIA_PUBLIC_URL` 为 Studio 的 HTTPS 公网地址。
+
 ## Version
 
-The current application version is `0.7.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
+The current application version is `0.8.0`. See [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## Status
 

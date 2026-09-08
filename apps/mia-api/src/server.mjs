@@ -4,6 +4,7 @@ import {
   createArticle,
   createTopic,
   getArticle,
+  getArticleAsset,
   initVault,
   listArticles,
   listPublishReceipts,
@@ -12,6 +13,7 @@ import {
   publicEntity,
   recordPublishReceipt,
   saveArticle,
+  storeArticleAsset,
   WorkspaceError,
 } from '@mia/workspace'
 
@@ -60,6 +62,14 @@ function cookies(req) {
 }
 
 async function readJson(req) {
+  const raw = await readBody(req)
+  if (!raw.length)
+    return {}
+  try { return JSON.parse(raw.toString(`utf8`)) }
+  catch { throw Object.assign(new Error(`Invalid JSON body`), { status: 400, code: `invalid_json` }) }
+}
+
+async function readBody(req) {
   const chunks = []
   let size = 0
   for await (const chunk of req) {
@@ -68,10 +78,7 @@ async function readJson(req) {
       throw Object.assign(new Error(`Request body is too large`), { status: 413, code: `body_too_large` })
     chunks.push(chunk)
   }
-  if (!chunks.length)
-    return {}
-  try { return JSON.parse(Buffer.concat(chunks).toString(`utf8`)) }
-  catch { throw Object.assign(new Error(`Invalid JSON body`), { status: 400, code: `invalid_json` }) }
+  return Buffer.concat(chunks)
 }
 
 function json(res, status, body, headers = {}) {
@@ -83,6 +90,16 @@ function json(res, status, body, headers = {}) {
     ...headers,
   })
   res.end(raw)
+}
+
+function binary(res, status, body, contentType) {
+  res.writeHead(status, {
+    'content-type': contentType,
+    'content-length': body.length,
+    'cache-control': `private, max-age=31536000, immutable`,
+    'x-content-type-options': `nosniff`,
+  })
+  res.end(body)
 }
 
 function errorResponse(res, error) {
@@ -109,6 +126,7 @@ export async function createMiaServer(options) {
     adminPassword,
     sessionSecret,
     apiToken = ``,
+    publicUrl = ``,
     publisher = null,
     secureCookies = true,
     sessionTtlMs = 30 * 24 * 60 * 60 * 1000,
@@ -119,6 +137,10 @@ export async function createMiaServer(options) {
   await initVault(vaultRoot)
   const expectedPassword = passwordDigest(adminPassword)
   const pendingPublishes = new Map()
+
+  function assetToken(articleId, filename) {
+    return createHmac(`sha256`, sessionSecret).update(`${articleId}/${filename}`).digest(`base64url`)
+  }
 
   function authenticated(req) {
     const bearer = String(req.headers.authorization || ``).replace(/^Bearer\s+/i, ``)
@@ -133,6 +155,14 @@ export async function createMiaServer(options) {
     try {
       if (pathname === `/v1/health` && req.method === `GET`)
         return json(res, 200, { status: `ok`, apiVersion: 1 })
+
+      const publicAsset = match(pathname, /^\/v1\/articles\/([^/]+)\/assets\/([^/]+)$/)
+      if (publicAsset && req.method === `GET`) {
+        if (!safeEqual(url.searchParams.get(`token`) || ``, assetToken(publicAsset[0], publicAsset[1])))
+          return json(res, 403, { error: { code: `invalid_asset_token`, message: `图片地址无效` } })
+        const asset = await getArticleAsset(vaultRoot, publicAsset[0], publicAsset[1])
+        return binary(res, 200, asset.data, asset.contentType)
+      }
 
       if (pathname === `/v1/auth/login` && req.method === `POST`) {
         const body = await readJson(req)
@@ -191,6 +221,19 @@ export async function createMiaServer(options) {
         const ifMatch = String(req.headers[`if-match`] || ``).replace(/^"|"$/g, ``)
         const article = await saveArticle(vaultRoot, articleRoute[0], String(body.content || ``), { ifMatch })
         return json(res, 200, publicEntity(article), { etag: `"${article.etag}"` })
+      }
+
+      const articleAssets = match(pathname, /^\/v1\/articles\/([^/]+)\/assets$/)
+      if (articleAssets && req.method === `POST`) {
+        const contentType = String(req.headers[`content-type`] || ``).split(`;`)[0].trim().toLowerCase()
+        const asset = await storeArticleAsset(vaultRoot, articleAssets[0], await readBody(req), { contentType })
+        const forwardedProtocol = String(req.headers[`x-forwarded-proto`] || ``).split(`,`)[0].trim()
+        const protocol = forwardedProtocol === `https` ? `https` : `http`
+        const host = String(req.headers[`x-forwarded-host`] || req.headers.host || `localhost`).split(`,`)[0].trim()
+        const assetPath = `/v1/articles/${encodeURIComponent(articleAssets[0])}/assets/${encodeURIComponent(asset.filename)}`
+        const token = assetToken(articleAssets[0], asset.filename)
+        const origin = String(publicUrl || `${protocol}://${host}`).replace(/\/+$/, ``)
+        return json(res, 201, { ...asset, url: `${origin}${assetPath}?token=${encodeURIComponent(token)}` })
       }
 
       const publishReceipts = match(pathname, /^\/v1\/articles\/([^/]+)\/publish\/receipts$/)

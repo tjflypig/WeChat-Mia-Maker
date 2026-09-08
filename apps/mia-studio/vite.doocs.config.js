@@ -9,6 +9,7 @@ const doocsSource = fileURLToPath(new URL(`../../vendor/doocs-md/apps/web/src`, 
 const cloudDocuments = fileURLToPath(new URL(`./src/doocs/cloud-documents.ts`, import.meta.url))
 const doocsStyles = fileURLToPath(new URL(`./src/doocs-source.css`, import.meta.url))
 const publishButton = fileURLToPath(new URL(`./src/doocs/MiaPublishButton.vue`, import.meta.url))
+const miaUpload = fileURLToPath(new URL(`./src/doocs/mia-upload.ts`, import.meta.url))
 
 export default defineConfig({
   plugins: [
@@ -44,6 +45,7 @@ export default defineConfig({
     alias: [
       { find: `@/assets/index.css`, replacement: doocsStyles },
       { find: `@/storage/repositories/documents`, replacement: cloudDocuments },
+      { find: /^@\/services\/upload$/, replacement: miaUpload },
       { find: `@`, replacement: doocsSource },
     ],
     dedupe: [`@codemirror/state`, `@codemirror/view`, `vue`, `pinia`],

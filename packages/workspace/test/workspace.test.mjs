@@ -7,6 +7,7 @@ import {
   createArticle,
   createTopic,
   getArticle,
+  getArticleAsset,
   getTopic,
   initVault,
   listArticles,
@@ -14,6 +15,7 @@ import {
   promoteTopic,
   recordPublishReceipt,
   saveArticle,
+  storeArticleAsset,
   VAULT_SCHEMA_VERSION,
   WorkspaceError,
 } from '../src/index.mjs'
@@ -47,6 +49,23 @@ test(`records immutable Markdown, rendered HTML and WeChat receipt artifacts`, (
   assert.equal(await readFile(path.join(receiptDirectory, `rendered.html`), `utf8`), html)
   assert.equal(JSON.parse(await readFile(path.join(receiptDirectory, `receipt.json`), `utf8`)).mediaId, `wechat-media-id`)
   assert.deepEqual((await readdir(receiptDirectory)).sort(), [`receipt.json`, `rendered.html`, `source.md`])
+}))
+
+test(`stores article images inside the article asset directory`, () => withVault(async (root) => {
+  const article = await createArticle(root, { title: `图片测试` })
+  const image = Buffer.from([0x89, 0x50, 0x4E, 0x47])
+  const stored = await storeArticleAsset(root, article.id, image, {
+    contentType: `image/png`,
+    originalName: `封面 图.png`,
+  })
+  assert.match(stored.filename, /^\d{14}-[a-f0-9]{8}\.png$/)
+  const loaded = await getArticleAsset(root, article.id, stored.filename)
+  assert.deepEqual(loaded.data, image)
+  assert.equal(loaded.contentType, `image/png`)
+  await assert.rejects(
+    storeArticleAsset(root, article.id, Buffer.from(`<svg/>`), { contentType: `image/svg+xml` }),
+    error => error instanceof WorkspaceError && error.code === `unsupported_asset_type`,
+  )
 }))
 
 test(`creates, lists and promotes a topic`, () => withVault(async (root) => {

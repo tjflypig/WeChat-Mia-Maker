@@ -153,7 +153,7 @@ export async function atomicWrite(file, content) {
   try {
     const handle = await open(temporary, `wx`, 0o600)
     try {
-      await handle.writeFile(content, `utf8`)
+      await handle.writeFile(content, typeof content === `string` ? `utf8` : undefined)
       await handle.sync()
     }
     finally {
@@ -317,6 +317,38 @@ export async function createArticle(root, { title, topicId = null, id: requested
 export async function getArticle(root, id) {
   await initVault(root)
   return findEntity(root, `article`, id)
+}
+
+const IMAGE_EXTENSIONS = Object.freeze({
+  'image/jpeg': `jpg`,
+  'image/png': `png`,
+  'image/gif': `gif`,
+  'image/webp': `webp`,
+})
+
+export async function storeArticleAsset(root, id, data, { contentType } = {}) {
+  const article = await getArticle(root, id)
+  const extension = IMAGE_EXTENSIONS[String(contentType || ``).toLowerCase()]
+  if (!extension)
+    throw new WorkspaceError(`unsupported_asset_type`, `Only JPEG, PNG, GIF and WebP images are supported`)
+  if (!Buffer.isBuffer(data) || data.length === 0)
+    throw new WorkspaceError(`empty_asset`, `Image file is empty`)
+
+  const filename = `${compactStamp()}-${randomUUID().slice(0, 8)}.${extension}`
+  await atomicWrite(path.join(path.dirname(article.file), `assets`, filename), data)
+  return { filename, contentType: String(contentType).toLowerCase(), bytes: data.length }
+}
+
+export async function getArticleAsset(root, id, filename) {
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{1,159}$/.test(String(filename)))
+    throw new WorkspaceError(`invalid_asset_name`, `Asset filename is invalid`)
+  const article = await getArticle(root, id)
+  const file = path.join(path.dirname(article.file), `assets`, filename)
+  if (!await exists(file))
+    throw new WorkspaceError(`not_found`, `Asset not found: ${filename}`, { id, filename })
+  const extension = path.extname(filename).slice(1).toLowerCase()
+  const contentType = Object.entries(IMAGE_EXTENSIONS).find(([, ext]) => ext === extension)?.[0] || `application/octet-stream`
+  return { data: await readFile(file), contentType }
 }
 
 export async function saveArticle(root, id, content, { ifMatch, now = new Date() } = {}) {

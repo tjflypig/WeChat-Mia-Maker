@@ -4,6 +4,19 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-08
+
+### Added
+
+- A visible cover upload action beside the native doocs publish action, persisted as article frontmatter metadata.
+- Authenticated article asset uploads backed by each article's Vault `assets/` directory.
+- Signed read-only asset URLs so the Tencent Cloud publisher can fetch local images and transfer them to the WeChat CDN during publishing.
+
+### Changed
+
+- Native doocs image upload tools now target Mia Vault storage and no longer require a separate image-host configuration.
+- Publish preflight forwards the selected cover URL while continuing to publish only the final doocs rendered HTML snapshot.
+
 ## [0.7.0] - 2026-09-05
 
 ### Added

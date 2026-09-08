@@ -14,6 +14,8 @@ API 统一返回 JSON。除健康检查和登录外，请求需要 `mia_session`
 | `POST` | `/v1/topics/:id/promote` | 选题立项为文章 |
 | `GET/POST` | `/v1/articles` | 查询/创建文章 |
 | `GET/PUT` | `/v1/articles/:id` | 读取/更新文章 |
+| `POST` | `/v1/articles/:id/assets` | 上传正文图片或封面到文章 Vault（登录或 Token） |
+| `GET` | `/v1/articles/:id/assets/:filename?token=...` | 通过签名地址读取素材，供微信发布器转存 CDN |
 | `POST` | `/v1/articles/:id/publish/preflight` | 锁定 doocs 最终 HTML 发布快照 |
 | `POST` | `/v1/articles/:id/publish/confirm` | 二次确认后调用微信草稿接口 |
 | `GET` | `/v1/articles/:id/publish/receipts` | 查询不可变发布回执 |
@@ -23,6 +25,8 @@ API 统一返回 JSON。除健康检查和登录外，请求需要 `mia_session`
 `GET /v1/articles/:id` 会返回 `ETag` header。更新时必须把该值放在 `If-Match` header 中。少传返回 `428 precondition_required`，文件已被其他终端修改时返回 `409 conflict` 及最新 ETag。
 
 发布预检同样必须携带当前文章的 `If-Match`。请求正文中的 `html` 必须来自 doocs/md 的公众号复制渲染流程，而不是 Markdown。预检生成的确认码十分钟内单次有效；文章改变、确认码重放或超时都不会调用微信接口。
+
+素材上传正文是原始图片二进制，`Content-Type` 仅支持 JPEG、PNG、GIF 和 WebP，单文件最大 8 MB。成功响应中的 `url` 带不可猜测签名，可由腾讯云发布器在无需登录 Cookie 的情况下读取；生产环境通过 `MIA_PUBLIC_URL` 固定该 URL 的 HTTPS 域名。该地址不是最终图床：确认发布时旧版发布引擎会把正文图片和封面转存到微信 CDN。
 
 微信草稿创建成功后，Vault 会在文章的 `publish/<receipt-id>/` 下保存发布时 Markdown、实际交给发布器的 doocs 渲染 HTML 和 `receipt.json`。旧版发布器在内部完成微信 CDN 图片替换但不返回替换后的正文，因此归档文件准确命名为 `rendered.html`，不冒充微信后台最终 HTML。若微信成功而归档失败，确认接口仍返回成功结果，并通过 `receiptWarning` 明确提示，避免重试造成重复草稿。
 
