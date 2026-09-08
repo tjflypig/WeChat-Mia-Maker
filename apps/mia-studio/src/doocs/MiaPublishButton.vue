@@ -4,6 +4,7 @@ import { buildAIHeaders, resolveEndpointUrl } from '@/composables/useAIFetch'
 import useAIImageConfigStore from '@/stores/aiImageConfig'
 import { processClipboardContent } from '@/services/export'
 import { getArticleSyncInfo, updateArticleMetadata } from '@/storage/repositories/documents'
+import { buildCoverPrompt } from './cover-prompt.mjs'
 import { uploadMiaImage } from './mia-upload'
 import { useEditorStore } from '@/stores/editor'
 import { usePostStore } from '@/stores/post'
@@ -16,13 +17,20 @@ const publishing = ref(false)
 const uploadingCover = ref(false)
 const coverInput = ref<HTMLInputElement | null>(null)
 const aiCoverOpen = ref(false)
-const aiPrompt = ref(`一张适合微信公众号文章的横版封面，简洁、有留白、具有生活实验感`)
+const aiDirection = ref(``)
 const generatingCover = ref(false)
 const savingGeneratedCover = ref(false)
 const generatedCoverFile = ref<File | null>(null)
 const generatedCoverUrl = ref(``)
 const aiImageStore = useAIImageConfigStore()
 const { endpoint: aiEndpoint, apiKey: aiApiKey, model: aiModel, type: aiType } = storeToRefs(aiImageStore)
+const coverArticleTitle = computed(() => postStore.currentPost?.title || `未命名文章`)
+
+function openAICover() {
+  editorStore.flushContentToPostStore()
+  aiDirection.value = ``
+  aiCoverOpen.value = true
+}
 
 async function imageToFile(source: string): Promise<File> {
   const response = await fetch(source)
@@ -89,16 +97,27 @@ async function confirmGeneratedCover() {
 }
 
 async function generateCover() {
-  if (generatingCover.value || !aiPrompt.value.trim())
+  if (generatingCover.value)
     return
   generatingCover.value = true
   try {
     if (!aiEndpoint.value || !aiModel.value)
       throw new Error(`请先在 doocs/md 的 AI 图片设置中配置服务和模型`)
+    editorStore.flushContentToPostStore()
+    const post = postStore.currentPost
+    if (!post)
+      throw new Error(`当前没有可生成封面的文章`)
+    const { metadata } = getArticleSyncInfo(post.id)
+    const prompt = buildCoverPrompt({
+      title: post.title,
+      summary: metadata.summary,
+      content: editorStore.getContent() || post.content,
+      direction: aiDirection.value,
+    })
     const response = await fetch(resolveEndpointUrl(aiEndpoint.value, `image`), {
       method: `POST`,
       headers: buildAIHeaders(aiApiKey.value, aiType.value),
-      body: JSON.stringify({ model: aiModel.value, prompt: aiPrompt.value.trim(), size: `1792x1024`, n: 1 }),
+      body: JSON.stringify({ model: aiModel.value, prompt, size: `1792x1024`, n: 1 }),
     })
     if (!response.ok)
       throw new Error(`${response.status}: ${await response.text()}`)
@@ -238,7 +257,7 @@ async function publishToWechat() {
       class="h-9 max-md:w-9 max-md:px-0"
       :disabled="uploadingCover || publishing || generatingCover"
       aria-label="AI 生成文章封面"
-      @click="aiCoverOpen = true"
+      @click="openAICover"
     >
       <Sparkles class="size-4 md:mr-2" />
       <span class="max-md:hidden">AI 封面</span>
@@ -260,9 +279,13 @@ async function publishToWechat() {
       <DialogContent class="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>AI 生成封面</DialogTitle>
-          <DialogDescription>生成后先预览最终 900×383 裁切结果，确认后才会设为当前文章封面。</DialogDescription>
+          <DialogDescription>将根据《{{ coverArticleTitle }}》的标题、摘要和正文生成，确认后才会设为封面。</DialogDescription>
         </DialogHeader>
-        <Textarea v-model="aiPrompt" rows="4" placeholder="描述你想要的封面画面…" :disabled="generatingCover || savingGeneratedCover" />
+        <div class="space-y-2">
+          <Label for="mia-cover-direction">补充画面要求 <span class="text-muted-foreground">（可选）</span></Label>
+          <Textarea id="mia-cover-direction" v-model="aiDirection" rows="3" placeholder="例如：人物不露脸，突出桌面上的实验装置…" :disabled="generatingCover || savingGeneratedCover" />
+          <p class="text-xs text-muted-foreground">固定输出 900×383，主体居中，不含文字、Logo 和水印。</p>
+        </div>
 
         <div v-if="generatedCoverUrl || generatingCover" class="relative aspect-[900/383] w-full overflow-hidden rounded-md border bg-muted">
           <img
@@ -287,7 +310,7 @@ async function publishToWechat() {
           <span v-else />
           <div class="flex flex-col-reverse gap-2 sm:flex-row">
             <Button variant="outline" class="h-11" :disabled="generatingCover || savingGeneratedCover" @click="aiCoverOpen = false">取消</Button>
-            <Button :variant="generatedCoverUrl ? 'outline' : 'default'" class="h-11" :disabled="generatingCover || savingGeneratedCover || !aiPrompt.trim()" :aria-busy="generatingCover" @click="generateCover">
+            <Button :variant="generatedCoverUrl ? 'outline' : 'default'" class="h-11" :disabled="generatingCover || savingGeneratedCover" :aria-busy="generatingCover" @click="generateCover">
               <Loader2 v-if="generatingCover" class="mr-2 size-4 animate-spin" />
               <RefreshCw v-else-if="generatedCoverUrl" class="mr-2 size-4" />
               <Sparkles v-else class="mr-2 size-4" />

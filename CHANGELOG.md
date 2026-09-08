@@ -4,6 +4,13 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-09-08
+
+### Changed
+
+- AI cover prompts now combine fixed WeChat cover constraints with the current article title, summary and Markdown-derived excerpt.
+- The cover dialog now accepts optional art direction instead of requiring authors to restate the article context and output format.
+
 ## [0.9.0] - 2026-09-08
 
 ### Added
