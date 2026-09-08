@@ -125,6 +125,22 @@ async function saveCloudPost(post: Post) {
   updateCache(post)
 }
 
+async function archiveCloudPost(id: string) {
+  const currentEtag = etagById.get(id)
+  if (!currentEtag)
+    throw new Error(`缺少文章版本标识，请刷新后重试`)
+  await api(`/articles/${encodeURIComponent(id)}`, {
+    method: `DELETE`,
+    headers: { 'if-match': `"${currentEtag}"` },
+  })
+  frontmatterById.delete(id)
+  etagById.delete(id)
+  syncedContentById.delete(id)
+  metadataById.delete(id)
+  if (cachedPosts)
+    cachedPosts = cachedPosts.filter(post => post.id !== id)
+}
+
 export function setUseLegacyDocumentStorage(_enabled: boolean): void {}
 export function isUsingLegacyDocumentStorage(): boolean { return false }
 export function getLoadedDocuments(): Post[] | null { return cachedPosts }
@@ -190,12 +206,29 @@ export const documentRepo = {
   },
 
   async saveAll(posts: Post[]): Promise<void> {
-    for (const post of posts)
-      await this.savePost(post)
-    cachedPosts = [...posts]
+    return serialized(async () => {
+      const nextIds = new Set(posts.map(post => post.id))
+      const removedIds = (cachedPosts || []).map(post => post.id).filter(id => !nextIds.has(id))
+      try {
+        for (const post of posts)
+          await saveCloudPost(post)
+        for (const id of removedIds)
+          await archiveCloudPost(id)
+        cachedPosts = [...posts]
+      }
+      catch (error) {
+        const message = (error as Error & { code?: string }).code === `conflict`
+          ? `云端文章已被其他终端修改，未执行归档，请刷新后核对。`
+          : `保存到腾讯云失败：${(error as Error).message}`
+        toast.error(message)
+        throw error
+      }
+    })
   },
 
-  async deletePost(_id: string): Promise<void> {},
+  async deletePost(id: string): Promise<void> {
+    return serialized(() => archiveCloudPost(id))
+  },
 
   async clear(): Promise<void> {
     cachedPosts = []

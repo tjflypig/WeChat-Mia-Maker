@@ -4,6 +4,18 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-08
+
+### Added
+
+- Review-first AI cover flow with final 900×383 preview, regeneration, download and explicit confirmation before Vault upload.
+- Recoverable server-side article archival through an ETag-protected `DELETE /v1/articles/:id` endpoint.
+
+### Fixed
+
+- Deleting or batch-deleting a doocs document now persists to Tencent Cloud instead of returning after reload.
+- Reading-time output no longer uses WeChat's editable blockquote element, keeping its exported height aligned with Mia preview.
+
 ## [0.8.3] - 2026-09-08
 
 ### Added

@@ -4,6 +4,7 @@ import vue from '@vitejs/plugin-vue'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { defineConfig } from 'vite'
+import { transformReadingTime } from './src/doocs/reading-time-transform.mjs'
 
 const doocsSource = fileURLToPath(new URL(`../../vendor/doocs-md/apps/web/src`, import.meta.url))
 const cloudDocuments = fileURLToPath(new URL(`./src/doocs/cloud-documents.ts`, import.meta.url))
@@ -18,7 +19,10 @@ export default defineConfig({
       name: `mia-doocs-publish-button`,
       enforce: `pre`,
       transform(code, id) {
-        if (!id.split(`?`)[0].endsWith(`/components/editor/editor-header/index.vue`))
+        const sourceId = id.split(`?`)[0]
+        if (sourceId.endsWith(`/packages/core/src/renderer/renderer-impl.ts`))
+          return transformReadingTime(code)
+        if (!sourceId.endsWith(`/components/editor/editor-header/index.vue`))
           return null
         return code
           .replace(`import HelpDropdown from './HelpDropdown.vue'`, `import HelpDropdown from ${JSON.stringify(helpDropdown)}`)

@@ -373,6 +373,34 @@ export async function saveArticle(root, id, content, { ifMatch, now = new Date()
   return readEntity(current.file)
 }
 
+export async function archiveArticle(root, id, { ifMatch, now = new Date() } = {}) {
+  const current = await getArticle(root, id)
+  if (!ifMatch)
+    throw new WorkspaceError(`precondition_required`, `If-Match is required`, { currentEtag: current.etag })
+  if (ifMatch !== current.etag)
+    throw new WorkspaceError(`conflict`, `Article changed since it was opened`, { currentEtag: current.etag })
+
+  const archivedAt = nowIso(now)
+  const sourceDirectory = path.dirname(current.file)
+  const archiveRoot = path.join(root, AREAS.archive, `articles`)
+  const archiveDirectory = path.join(
+    archiveRoot,
+    `${compactStamp(now)}-${path.basename(sourceDirectory)}-${randomUUID().slice(0, 8)}`,
+  )
+  const archivedContent = patchFrontmatter(current.content, {
+    status: `archived`,
+    archived_at: archivedAt,
+    archived_from: `${AREAS.articles}/${path.basename(sourceDirectory)}`,
+    updated_at: archivedAt,
+    revision: Number(current.frontmatter.revision || 0) + 1,
+  })
+
+  await mkdir(archiveRoot, { recursive: true })
+  await rename(sourceDirectory, archiveDirectory)
+  await atomicWrite(path.join(archiveDirectory, `index.md`), archivedContent)
+  return readEntity(path.join(archiveDirectory, `index.md`))
+}
+
 export async function recordPublishReceipt(root, id, {
   renderedHtml,
   snapshotHash,

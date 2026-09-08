@@ -74,6 +74,22 @@ test(`serves authenticated article APIs and rejects stale writes`, async () => {
     })
     assert.equal(conflictResponse.status, 409)
     assert.equal((await conflictResponse.json()).error.code, `conflict`)
+
+    const staleDeleteResponse = await fetch(`${base}/v1/articles/${created.id}`, {
+      method: `DELETE`,
+      headers: { cookie, 'if-match': `"${originalEtag}"` },
+    })
+    assert.equal(staleDeleteResponse.status, 409)
+
+    const saved = await savedResponse.json()
+    const deleteResponse = await fetch(`${base}/v1/articles/${created.id}`, {
+      method: `DELETE`,
+      headers: { cookie, 'if-match': `"${saved.etag}"` },
+    })
+    assert.equal(deleteResponse.status, 200)
+    assert.equal((await deleteResponse.json()).frontmatter.status, `archived`)
+    assert.equal((await fetch(`${base}/v1/articles/${created.id}`, { headers: { cookie } })).status, 404)
+    assert.deepEqual((await (await fetch(`${base}/v1/articles`, { headers: { cookie } })).json()).articles, [])
   }
   finally {
     await new Promise(resolve => server.close(resolve))

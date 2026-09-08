@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import {
+  archiveArticle,
   createArticle,
   createTopic,
   getArticle,
@@ -92,4 +93,27 @@ test(`protects article updates with an ETag`, () => withVault(async (root) => {
     error => error instanceof WorkspaceError && error.code === `conflict`,
   )
   assert.equal((await getArticle(root, article.id)).etag, saved.etag)
+}))
+
+test(`archives an article with ETag protection and removes it from the active list`, () => withVault(async (root) => {
+  const article = await createArticle(root, { title: `可恢复归档` })
+
+  await assert.rejects(
+    archiveArticle(root, article.id, { ifMatch: `stale-etag` }),
+    error => error instanceof WorkspaceError && error.code === `conflict`,
+  )
+
+  const archived = await archiveArticle(root, article.id, {
+    ifMatch: article.etag,
+    now: new Date(`2026-09-08T08:30:00.000Z`),
+  })
+  assert.equal(archived.frontmatter.status, `archived`)
+  assert.equal(archived.frontmatter.archived_at, `2026-09-08T08:30:00.000Z`)
+  assert.match(archived.frontmatter.archived_from, /^30-articles\//)
+  assert.equal((await listArticles(root)).length, 0)
+  await assert.rejects(
+    getArticle(root, article.id),
+    error => error instanceof WorkspaceError && error.code === `not_found`,
+  )
+  assert.equal((await readdir(path.join(root, `90-archive`, `articles`))).length, 1)
 }))

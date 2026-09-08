@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServer as createHttpServer } from 'node:http'
 import {
+  archiveArticle,
   createArticle,
   createTopic,
   getArticle,
@@ -220,6 +221,12 @@ export async function createMiaServer(options) {
         const body = await readJson(req)
         const ifMatch = String(req.headers[`if-match`] || ``).replace(/^"|"$/g, ``)
         const article = await saveArticle(vaultRoot, articleRoute[0], String(body.content || ``), { ifMatch })
+        return json(res, 200, publicEntity(article), { etag: `"${article.etag}"` })
+      }
+
+      if (articleRoute && req.method === `DELETE`) {
+        const ifMatch = String(req.headers[`if-match`] || ``).replace(/^"|"$/g, ``)
+        const article = await archiveArticle(vaultRoot, articleRoute[0], { ifMatch })
         return json(res, 200, publicEntity(article), { etag: `"${article.etag}"` })
       }
 

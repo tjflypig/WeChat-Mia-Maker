@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ImagePlus, Loader2, Send, Sparkles } from '@lucide/vue'
+import { Download, ImagePlus, Loader2, RefreshCw, Send, Sparkles } from '@lucide/vue'
 import { buildAIHeaders, resolveEndpointUrl } from '@/composables/useAIFetch'
 import useAIImageConfigStore from '@/stores/aiImageConfig'
 import { processClipboardContent } from '@/services/export'
@@ -18,6 +18,9 @@ const coverInput = ref<HTMLInputElement | null>(null)
 const aiCoverOpen = ref(false)
 const aiPrompt = ref(`一张适合微信公众号文章的横版封面，简洁、有留白、具有生活实验感`)
 const generatingCover = ref(false)
+const savingGeneratedCover = ref(false)
+const generatedCoverFile = ref<File | null>(null)
+const generatedCoverUrl = ref(``)
 const aiImageStore = useAIImageConfigStore()
 const { endpoint: aiEndpoint, apiKey: aiApiKey, model: aiModel, type: aiType } = storeToRefs(aiImageStore)
 
@@ -45,6 +48,46 @@ async function imageToFile(source: string): Promise<File> {
   return new File([blob], `ai-cover.jpg`, { type: `image/jpeg` })
 }
 
+function replaceGeneratedCover(file: File | null) {
+  if (generatedCoverUrl.value)
+    URL.revokeObjectURL(generatedCoverUrl.value)
+  generatedCoverFile.value = file
+  generatedCoverUrl.value = file ? URL.createObjectURL(file) : ``
+}
+
+function downloadGeneratedCover() {
+  if (!generatedCoverUrl.value)
+    return
+  const link = document.createElement(`a`)
+  link.href = generatedCoverUrl.value
+  link.download = `mia-cover-900x383.jpg`
+  link.click()
+}
+
+async function confirmGeneratedCover() {
+  if (!generatedCoverFile.value || savingGeneratedCover.value)
+    return
+  savingGeneratedCover.value = true
+  try {
+    editorStore.flushContentToPostStore()
+    await postStore.persistImmediately()
+    const post = postStore.currentPost
+    if (!post)
+      throw new Error(`当前没有可设置封面的文章`)
+    const url = await uploadMiaImage(generatedCoverFile.value)
+    await updateArticleMetadata(post.id, { cover: url })
+    replaceGeneratedCover(null)
+    aiCoverOpen.value = false
+    toast.success(`AI 封面已保存到腾讯云`)
+  }
+  catch (error) {
+    toast.error(`AI 封面保存失败：${error instanceof Error ? error.message : String(error)}`)
+  }
+  finally {
+    savingGeneratedCover.value = false
+  }
+}
+
 async function generateCover() {
   if (generatingCover.value || !aiPrompt.value.trim())
     return
@@ -63,15 +106,11 @@ async function generateCover() {
     const source = body?.data?.[0]?.url || (body?.data?.[0]?.b64_json ? `data:image/png;base64,${body.data[0].b64_json}` : ``)
     if (!source)
       throw new Error(`AI 没有返回图片`)
-    editorStore.flushContentToPostStore()
-    await postStore.persistImmediately()
-    const post = postStore.currentPost
-    if (!post)
-      throw new Error(`当前没有可设置封面的文章`)
-    const url = await uploadMiaImage(await imageToFile(source))
-    await updateArticleMetadata(post.id, { cover: url })
-    aiCoverOpen.value = false
-    toast.success(`AI 封面已裁切为 900×383 并保存到腾讯云`)
+    const file = await imageToFile(source)
+    if (!aiCoverOpen.value)
+      return
+    replaceGeneratedCover(file)
+    toast.success(`AI 封面已生成，请预览后确认`)
   }
   catch (error) {
     toast.error(`AI 封面生成失败：${error instanceof Error ? error.message : String(error)}`)
@@ -80,6 +119,13 @@ async function generateCover() {
     generatingCover.value = false
   }
 }
+
+watch(aiCoverOpen, (open) => {
+  if (!open)
+    replaceGeneratedCover(null)
+})
+
+onBeforeUnmount(() => replaceGeneratedCover(null))
 
 async function uploadCover(event: Event) {
   const input = event.target as HTMLInputElement
@@ -211,19 +257,48 @@ async function publishToWechat() {
     </Button>
 
     <Dialog v-model:open="aiCoverOpen">
-      <DialogContent class="sm:max-w-lg">
+      <DialogContent class="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>AI 生成封面</DialogTitle>
-          <DialogDescription>固定输出微信公众号横版封面 900×383，生成后会保存到当前文章。</DialogDescription>
+          <DialogDescription>生成后先预览最终 900×383 裁切结果，确认后才会设为当前文章封面。</DialogDescription>
         </DialogHeader>
-        <Textarea v-model="aiPrompt" rows="4" placeholder="描述你想要的封面画面…" :disabled="generatingCover" />
-        <div class="flex justify-end gap-2">
-          <Button variant="outline" :disabled="generatingCover" @click="aiCoverOpen = false">取消</Button>
-          <Button :disabled="generatingCover || !aiPrompt.trim()" :aria-busy="generatingCover" @click="generateCover">
-            <Loader2 v-if="generatingCover" class="mr-2 size-4 animate-spin" />
-            <Sparkles v-else class="mr-2 size-4" />
-            {{ generatingCover ? '生成中…' : '生成并设为封面' }}
+        <Textarea v-model="aiPrompt" rows="4" placeholder="描述你想要的封面画面…" :disabled="generatingCover || savingGeneratedCover" />
+
+        <div v-if="generatedCoverUrl || generatingCover" class="relative aspect-[900/383] w-full overflow-hidden rounded-md border bg-muted">
+          <img
+            v-if="generatedCoverUrl"
+            :src="generatedCoverUrl"
+            alt="AI 生成的微信文章封面预览"
+            width="900"
+            height="383"
+            class="h-full w-full object-cover"
+          >
+          <div v-if="generatingCover" class="absolute inset-0 flex items-center justify-center gap-2 bg-background/80 text-sm" role="status">
+            <Loader2 class="size-5 animate-spin" />
+            正在生成封面…
+          </div>
+        </div>
+
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+          <Button v-if="generatedCoverUrl" variant="outline" class="h-11" :disabled="generatingCover || savingGeneratedCover" @click="downloadGeneratedCover">
+            <Download class="mr-2 size-4" />
+            下载预览
           </Button>
+          <span v-else />
+          <div class="flex flex-col-reverse gap-2 sm:flex-row">
+            <Button variant="outline" class="h-11" :disabled="generatingCover || savingGeneratedCover" @click="aiCoverOpen = false">取消</Button>
+            <Button :variant="generatedCoverUrl ? 'outline' : 'default'" class="h-11" :disabled="generatingCover || savingGeneratedCover || !aiPrompt.trim()" :aria-busy="generatingCover" @click="generateCover">
+              <Loader2 v-if="generatingCover" class="mr-2 size-4 animate-spin" />
+              <RefreshCw v-else-if="generatedCoverUrl" class="mr-2 size-4" />
+              <Sparkles v-else class="mr-2 size-4" />
+              {{ generatingCover ? '生成中…' : generatedCoverUrl ? '重新生成' : '生成预览' }}
+            </Button>
+            <Button v-if="generatedCoverUrl" class="h-11" :disabled="generatingCover || savingGeneratedCover" :aria-busy="savingGeneratedCover" @click="confirmGeneratedCover">
+              <Loader2 v-if="savingGeneratedCover" class="mr-2 size-4 animate-spin" />
+              <ImagePlus v-else class="mr-2 size-4" />
+              {{ savingGeneratedCover ? '保存中…' : '设为封面' }}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
