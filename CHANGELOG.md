@@ -4,6 +4,13 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-09-08
+
+### Added
+
+- AI cover generation action using the existing doocs image-service configuration.
+- Fixed 900×383 JPEG cover output, cropped client-side before Vault upload.
+
 ## [0.8.2] - 2026-09-08
 
 ### Changed
