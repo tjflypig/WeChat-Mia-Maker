@@ -4,6 +4,13 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-09-09
+
+### Changed
+
+- AI cover rules are now editable in the generation dialog and persist in the current browser.
+- Authors can restore the default cover rules or remove conflicting constraints before generation.
+
 ## [0.9.1] - 2026-09-08
 
 ### Changed

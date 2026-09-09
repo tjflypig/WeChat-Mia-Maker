@@ -79,7 +79,7 @@ API 默认使用 `/v1`，支持登录会话、Bearer token、选题创建/立项
 
 ## Version
 
-The current application version is `0.9.1`. See [docs/VERSIONING.md](docs/VERSIONING.md).
+The current application version is `0.9.2`. See [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## Status
 

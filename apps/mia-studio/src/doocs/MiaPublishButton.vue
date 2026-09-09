@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Download, ImagePlus, Loader2, RefreshCw, Send, Sparkles } from '@lucide/vue'
+import { useStorage } from '@vueuse/core'
 import { buildAIHeaders, resolveEndpointUrl } from '@/composables/useAIFetch'
 import useAIImageConfigStore from '@/stores/aiImageConfig'
 import { processClipboardContent } from '@/services/export'
 import { getArticleSyncInfo, updateArticleMetadata } from '@/storage/repositories/documents'
-import { buildCoverPrompt } from './cover-prompt.mjs'
+import { buildCoverPrompt, DEFAULT_COVER_RULES } from './cover-prompt.mjs'
 import { uploadMiaImage } from './mia-upload'
 import { useEditorStore } from '@/stores/editor'
 import { usePostStore } from '@/stores/post'
@@ -18,6 +19,7 @@ const uploadingCover = ref(false)
 const coverInput = ref<HTMLInputElement | null>(null)
 const aiCoverOpen = ref(false)
 const aiDirection = ref(``)
+const aiCoverRules = useStorage(`mia-cover-rules`, DEFAULT_COVER_RULES)
 const generatingCover = ref(false)
 const savingGeneratedCover = ref(false)
 const generatedCoverFile = ref<File | null>(null)
@@ -113,6 +115,7 @@ async function generateCover() {
       summary: metadata.summary,
       content: editorStore.getContent() || post.content,
       direction: aiDirection.value,
+      rules: aiCoverRules.value,
     })
     const response = await fetch(resolveEndpointUrl(aiEndpoint.value, `image`), {
       method: `POST`,
@@ -282,9 +285,25 @@ async function publishToWechat() {
           <DialogDescription>将根据《{{ coverArticleTitle }}》的标题、摘要和正文生成，确认后才会设为封面。</DialogDescription>
         </DialogHeader>
         <div class="space-y-2">
+          <div class="flex items-center justify-between gap-3">
+            <Label for="mia-cover-rules">固定规则</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              class="h-9 px-3 text-xs"
+              :disabled="generatingCover || savingGeneratedCover || aiCoverRules === DEFAULT_COVER_RULES"
+              @click="aiCoverRules = DEFAULT_COVER_RULES"
+            >
+              恢复默认
+            </Button>
+          </div>
+          <Textarea id="mia-cover-rules" v-model="aiCoverRules" rows="6" :disabled="generatingCover || savingGeneratedCover" />
+          <p class="text-xs text-muted-foreground">修改后会自动保存在当前浏览器。需要封面文字时，请删除“不要出现任何文字”这条。</p>
+        </div>
+        <div class="space-y-2">
           <Label for="mia-cover-direction">补充画面要求 <span class="text-muted-foreground">（可选）</span></Label>
           <Textarea id="mia-cover-direction" v-model="aiDirection" rows="3" placeholder="例如：人物不露脸，突出桌面上的实验装置…" :disabled="generatingCover || savingGeneratedCover" />
-          <p class="text-xs text-muted-foreground">固定输出 900×383，主体居中，不含文字、Logo 和水印。</p>
+          <p class="text-xs text-muted-foreground">会和上方规则、文章标题、摘要及正文一起发送给图片模型。</p>
         </div>
 
         <div v-if="generatedCoverUrl || generatingCover" class="relative aspect-[900/383] w-full overflow-hidden rounded-md border bg-muted">

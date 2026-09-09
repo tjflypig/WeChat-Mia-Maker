@@ -29,3 +29,14 @@ test(`builds a fixed-format cover prompt from the current article`, () => {
   assert.match(prompt, /人物不露脸/)
   assert.doesNotMatch(prompt, /assets\/device\.png/)
 })
+
+test(`uses editable cover rules instead of the defaults`, () => {
+  const prompt = buildCoverPrompt({
+    title: `云南之旅`,
+    content: `一家人走进云南`,
+    rules: `- 必须原样显示中文标题“云南之旅”。`,
+  })
+
+  assert.match(prompt, /必须原样显示中文标题“云南之旅”/)
+  assert.doesNotMatch(prompt, /不要出现任何文字/)
+})
