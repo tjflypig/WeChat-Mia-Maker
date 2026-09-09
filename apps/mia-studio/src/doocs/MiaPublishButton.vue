@@ -5,7 +5,7 @@ import { buildAIHeaders, resolveEndpointUrl } from '@/composables/useAIFetch'
 import useAIImageConfigStore from '@/stores/aiImageConfig'
 import { processClipboardContent } from '@/services/export'
 import { getArticleSyncInfo, updateArticleMetadata } from '@/storage/repositories/documents'
-import { buildCoverPrompt, DEFAULT_COVER_RULES } from './cover-prompt.mjs'
+import { buildCoverPrompt, DEFAULT_COVER_RULES, isImageEditModel } from './cover-prompt.mjs'
 import { uploadMiaImage } from './mia-upload'
 import { useEditorStore } from '@/stores/editor'
 import { usePostStore } from '@/stores/post'
@@ -105,6 +105,8 @@ async function generateCover() {
   try {
     if (!aiEndpoint.value || !aiModel.value)
       throw new Error(`请先在 doocs/md 的 AI 图片设置中配置服务和模型`)
+    if (isImageEditModel(aiModel.value))
+      throw new Error(`当前模型 ${aiModel.value} 是图片编辑模型，请在 AI 文生图配置中改选 Qwen/Qwen-Image 或 Qwen/Qwen-Image-Plus`)
     editorStore.flushContentToPostStore()
     const post = postStore.currentPost
     if (!post)

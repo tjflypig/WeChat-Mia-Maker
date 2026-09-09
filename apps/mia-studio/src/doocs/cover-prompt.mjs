@@ -33,3 +33,7 @@ export function buildCoverPrompt({ title, summary, content, direction, rules = D
 ${fixedRules ? `固定规则：\n${fixedRules}\n\n` : ``}文章内容：
 ${article}${direction ? `\n\n作者补充要求：\n${String(direction).trim()}` : ``}`
 }
+
+export function isImageEditModel(model) {
+  return /(?:^|[-_/])edit(?:[-_/]|$)/i.test(String(model || ``))
+}

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
-import { buildCoverPrompt } from '../src/doocs/cover-prompt.mjs'
+import { buildCoverPrompt, isImageEditModel } from '../src/doocs/cover-prompt.mjs'
 import { transformReadingTime } from '../src/doocs/reading-time-transform.mjs'
 
 test(`replaces doocs reading-time blockquote with compact WeChat-safe HTML`, async () => {
@@ -39,4 +39,9 @@ test(`uses editable cover rules instead of the defaults`, () => {
 
   assert.match(prompt, /必须原样显示中文标题“云南之旅”/)
   assert.doesNotMatch(prompt, /不要出现任何文字/)
+})
+
+test(`distinguishes image editing models from text-to-image models`, () => {
+  assert.equal(isImageEditModel(`Qwen/Qwen-Image-Edit-2509`), true)
+  assert.equal(isImageEditModel(`Qwen/Qwen-Image-Plus`), false)
 })

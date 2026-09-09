@@ -4,6 +4,12 @@ All notable changes are recorded here. The project follows Semantic Versioning a
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-09-09
+
+### Fixed
+
+- AI cover generation now rejects image-edit-only models with an actionable model-selection message instead of forwarding a failing text-only request.
+
 ## [0.9.2] - 2026-09-09
 
 ### Changed
